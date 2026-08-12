@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <script>try{if(localStorage.getItem('pydevices-theme')==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}</script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>lv_circuitpython_mod — PyDevices</title>
+  <title>lvgl-circuitpython — PyDevices</title>
   <meta name="description" content="CircuitPython LVGL extension with patch scripts for out-of-tree builds — not a MicroPython USER_C_MODULES usermod.">
   <link rel="icon" type="image/svg+xml" href="https://pydevices.github.io/assets/img/logo.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,26 +18,26 @@
   <section class="hero wrap">
     <div class="hero-lead">
       <div class="hero-brand">
-        <div class="logo-badge product-mark"><img src="img/product.svg" alt="lv_circuitpython_mod" width="112" height="112"></div>
-        <span class="eyebrow">PyDevices / lv_circuitpython_mod</span>
+        <div class="logo-badge product-mark"><img src="img/product.svg" alt="lvgl-circuitpython" width="112" height="112"></div>
+        <span class="eyebrow">PyDevices / lvgl-circuitpython</span>
       </div>
-      <h1>lv_circuitpython_mod</h1>
+      <h1>lvgl-circuitpython</h1>
     </div>
-    <p>CircuitPython LVGL extension kept out of Adafruit&apos;s tree: spike sources under <code>src/</code>, plus <code>./apply_cp_patches.sh</code> to patch a local CircuitPython clone and copy templates so <code>import lvgl</code> builds as a native module. Binding artifacts come from <a href="https://pydevices.github.io/lv_bindings/">lv_bindings</a> (<code>generated/lvgl_circuitpython.c</code> / <code>.h</code>).</p>
+    <p>CircuitPython LVGL extension kept out of Adafruit&apos;s tree: spike sources under <code>src/</code>, plus <code>./apply_cp_patches.sh</code> to patch a local CircuitPython clone and copy templates so <code>import lvgl</code> builds as a native module. Binding artifacts come from <a href="https://pydevices.github.io/lvgl-bindings/">lvgl-bindings</a> (<code>generated/lvgl_circuitpython.c</code> / <code>.h</code>).</p>
     <p>Adafruit has no MicroPython-style <code>USER_C_MODULES</code> path — this repo is the out-of-tree workflow. Pin a CircuitPython release tag, regenerate bindings when needed, then <code>./apply_cp_patches.sh --apply</code> and <code>make</code>.</p>
     <div class="cta">
-      <a class="btn primary" href="https://github.com/PyDevices/lv_circuitpython_mod">
+      <a class="btn primary" href="https://github.com/PyDevices/lvgl-circuitpython">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.9a3.4 3.4 0 0 0-1-2.6c3-.3 6-1.5 6-6.5a5 5 0 0 0-1.4-3.5 4.6 4.6 0 0 0-.1-3.5s-1.1-.3-3.5 1.3a12 12 0 0 0-6 0C6.6 1.7 5.5 2 5.5 2a4.6 4.6 0 0 0-.1 3.5A5 5 0 0 0 4 9c0 5 3 6.2 6 6.5a3.4 3.4 0 0 0-1 2.6V22"/></svg>
         Source on GitHub
       </a>
-      <a class="btn" href="https://pydevices.github.io/lv_bindings/">lv_bindings</a>
+      <a class="btn" href="https://pydevices.github.io/lvgl-bindings/">lvgl-bindings</a>
     </div>
   </section>
 
   <main class="cards wrap">
     <div class="section-head">
       <h2>First-time setup</h2>
-      <span class="hint">Sibling clones of <code>lv_bindings/</code> and a tagged <code>circuitpython/</code></span>
+      <span class="hint">Sibling clones of <code>lvgl-bindings/</code> and a tagged <code>circuitpython/</code></span>
     </div>
     <div class="install-block">
       <pre><code># Pick a stable tag from github.com/adafruit/circuitpython/releases
@@ -45,8 +45,8 @@ git clone --branch 10.2.1 \
   https://github.com/adafruit/circuitpython.git circuitpython
 cd circuitpython &amp;&amp; make fetch-all-submodules &amp;&amp; cd ..
 
-git clone https://github.com/PyDevices/lv_bindings.git lv_bindings
-cd lv_bindings
+git clone https://github.com/PyDevices/lvgl-bindings.git lvgl-bindings
+cd lvgl-bindings
 git submodule update --init lvgl
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
@@ -62,14 +62,14 @@ cd ..</code></pre>
       <div class="snippet-card">
         <h3>unix coverage</h3>
         <p>Good for the CP test suite / gcov.</p>
-        <pre><code>cd lv_circuitpython_mod
+        <pre><code>cd lvgl-circuitpython
 ./apply_cp_patches.sh --apply \
   --port unix --variant coverage
 cd ../circuitpython/ports/unix
 make -j VARIANT=coverage
 
 ./build-coverage/micropython \
-  ../../lv_circuitpython_mod/tools/test_lvgl_cp_unix.py</code></pre>
+  ../../lvgl-circuitpython/tools/test_lvgl_cp_unix.py</code></pre>
       </div>
       <div class="snippet-card">
         <h3>Board firmware</h3>
@@ -85,10 +85,10 @@ cd ../circuitpython/ports/espressif && make -j \
       <h2>Related</h2>
     </div>
     <ul class="linklist">
-      <li><a href="https://pydevices.github.io/lv_bindings/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>lv_bindings — binding generator</a></li>
+      <li><a href="https://pydevices.github.io/lvgl-bindings/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>lvgl-bindings — binding generator</a></li>
       <li><a href="https://github.com/PyDevices/cmods"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>cmods — easier builds with other CircuitPython extensions</a></li>
       <li><a href="https://pydevices.github.io/pydisplay/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>pydisplay</a></li>
-      <li><a href="https://pydevices.github.io/lv_micropython_cmod/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>lv_micropython_cmod — MicroPython usermod</a></li>
+      <li><a href="https://pydevices.github.io/lvgl-micropython/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>lvgl-micropython — MicroPython usermod</a></li>
     </ul>
   </main>
 

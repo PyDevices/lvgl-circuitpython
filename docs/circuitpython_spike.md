@@ -24,7 +24,7 @@ circuitpython/
 Generated bindings (not copied wholesale):
 
 ```
-lv_bindings/generated/lvgl_circuitpython.c   ← regenerate_lvcp.sh
+lvgl-bindings/generated/lvgl_circuitpython.c   ← regenerate_lvcp.sh
 ```
 
 ## Build flow
@@ -45,7 +45,7 @@ Display flush/tick: **ON HOLD** — not in these C files. See `docs/gc_callback_
 
 ## Merging generated bindings into the spike module
 
-Full emission (`max_phase: 7` in `lv_bindings`) produces
+Full emission (`max_phase: 7` in `lvgl-bindings`) produces
 `generated/lvgl_circuitpython.c` (~39.5k lines, parity with
 `lvgl_micropython.c`) containing:
 

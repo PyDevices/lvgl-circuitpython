@@ -21,18 +21,18 @@
 #
 # Environment: WORKSPACE_DIR, CP_DIR, PORT, BOARD, VARIANT
 #
-# Standalone: clone circuitpython + lv_circuitpython_mod (+ lv_bindings) as
+# Standalone: clone circuitpython + lvgl-circuitpython (+ lvgl-bindings) as
 # siblings, then:
 #   ./apply_cp_patches.sh --apply --port unix --variant coverage
 #   cd ../circuitpython/ports/unix && make -j VARIANT=coverage
 # No other usermods required.
 #
 # All-port requirements (unix, espressif, …) — not ESP-specific:
-#   1. include lv_circuitpython_mod/circuitpython.mk from the port Makefile
+#   1. include lvgl-circuitpython/circuitpython.mk from the port Makefile
 #   2. SRC_QSTR excludes $(LV_CP_LVGL_SOURCES) (LVGL .c has no MP_QSTR_*; avoids ARG_MAX)
-#   3. CIRCUITPY_GIFIO=0 when CIRCUITPY_LVGL=1 (lv_bindings lv_conf.h has LV_USE_GIF=1;
+#   3. CIRCUITPY_GIFIO=0 when CIRCUITPY_LVGL=1 (lvgl-bindings lv_conf.h has LV_USE_GIF=1;
 #      CircuitPython GIFIO vendors a colliding AnimatedGIF gif.c)
-# No lv_bindings generator changes are required for those constraints.
+# No lvgl-bindings generator changes are required for those constraints.
 
 set -euo pipefail
 
@@ -479,7 +479,7 @@ collect_patch_files
 
 log "CircuitPython: $CP_DIR"
 log "workspace:     $WORKSPACE_DIR"
-log "lv_circuitpython_mod: $LV_CP_MOD_DIR (as $LV_CP_MOD_REL from port)"
+log "lvgl-circuitpython: $LV_CP_MOD_DIR (as $LV_CP_MOD_REL from port)"
 log "port:            $PORT"
 [[ -n "$BOARD" ]] && log "board:           $BOARD"
 [[ -n "$VARIANT" ]] && log "variant:         $VARIANT"
@@ -572,7 +572,7 @@ done
 
 log "==> Patch py/circuitpy_mpconfig.mk (default off; GIFIO off when LVGL on)"
 # CIRCUITPY_GIFIO ?= $(CIRCUITPY_DISPLAYIO) earlier in this file — force off when LVGL
-# links libs/gif (lv_bindings lv_conf.h: LV_USE_GIF=1).
+# links libs/gif (lvgl-bindings lv_conf.h: LV_USE_GIF=1).
 MPCONFIG_BLOCK="CIRCUITPY_LVGL ?= 0
 CFLAGS += -DCIRCUITPY_LVGL=\$(CIRCUITPY_LVGL)
 ifeq (\$(CIRCUITPY_LVGL),1)
@@ -705,10 +705,10 @@ elif [ "$APPLY" = 1 ]; then
     log "Patches applied."
     log
     log "Next:"
-    if [[ -x "$WORKSPACE_DIR/lv_bindings/regenerate_lvcp.sh" ]]; then
-        log "  $WORKSPACE_DIR/lv_bindings/regenerate_lvcp.sh"
+    if [[ -x "$WORKSPACE_DIR/lvgl-bindings/regenerate_lvcp.sh" ]]; then
+        log "  $WORKSPACE_DIR/lvgl-bindings/regenerate_lvcp.sh"
     else
-        log "  (regenerate lv_bindings CircuitPython artifacts if needed)"
+        log "  (regenerate lvgl-bindings CircuitPython artifacts if needed)"
     fi
     log "  $(build_next_cmd)"
     log "See https://github.com/PyDevices/cmods for an easier way to build with other extensions."

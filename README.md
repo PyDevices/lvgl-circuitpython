@@ -1,23 +1,23 @@
-# lv_circuitpython_mod
+# lvgl-circuitpython
 
 CircuitPython integration for LVGL: tree patches, build glue, spike templates, and tests.
 
-This repo is a consumer/build repo for the LVGL stack. It consumes generated bindings from lv_bindings and rebuilds CircuitPython targets, but it does not publish its own package to TestPyPI; lv_cpython_mod is the publishing endpoint for the family.
+This repo is a consumer/build repo for the LVGL stack. It consumes generated bindings from lvgl-bindings and rebuilds CircuitPython targets, but it does not publish its own package to TestPyPI; lvgl-python is the publishing endpoint for the family.
 
-Requires sibling clones of [lv_bindings](https://github.com/PyDevices/lv_bindings) (generated `lvcp.c`) and [circuitpython](https://github.com/adafruit/circuitpython). Check out a [stable release tag](https://github.com/adafruit/circuitpython/releases) — pick the version yourself; this repo does not track a specific CircuitPython version.
+Requires sibling clones of [lvgl-bindings](https://github.com/PyDevices/lvgl-bindings) (generated `lvcp.c`) and [circuitpython](https://github.com/adafruit/circuitpython). Check out a [stable release tag](https://github.com/adafruit/circuitpython/releases) — pick the version yourself; this repo does not track a specific CircuitPython version.
 
 ## Workspace layout
 
-Place this repo as a sibling of `lv_bindings/` and `circuitpython/`:
+Place this repo as a sibling of `lvgl-bindings/` and `circuitpython/`:
 
 ```
 workspace/
-  lv_circuitpython_mod/     ← this repo
-  lv_bindings/
+  lvgl-circuitpython/     ← this repo
+  lvgl-bindings/
   circuitpython/
 ```
 
-For day-to-day work, this repo is the place to patch CircuitPython’s LVGL integration, not the place to author the generator itself. The common loop is to change the patch set or the spike templates under **`src/`**, apply patches with **`./apply_cp_patches.sh --apply`**, rebuild with plain `make`, and smoke-test with the shared LVGL smoke script. If the underlying binding shape changed, regenerate **`lv_bindings`** first so the generated `lvcp.c` and header files stay in sync.
+For day-to-day work, this repo is the place to patch CircuitPython’s LVGL integration, not the place to author the generator itself. The common loop is to change the patch set or the spike templates under **`src/`**, apply patches with **`./apply_cp_patches.sh --apply`**, rebuild with plain `make`, and smoke-test with the shared LVGL smoke script. If the underlying binding shape changed, regenerate **`lvgl-bindings`** first so the generated `lvcp.c` and header files stay in sync.
 
 ## 🚀 First-time setup
 
@@ -28,8 +28,8 @@ cd circuitpython
 make fetch-all-submodules
 cd ..
 
-git clone https://github.com/PyDevices/lv_bindings.git lv_bindings
-cd lv_bindings
+git clone https://github.com/PyDevices/lvgl-bindings.git lvgl-bindings
+cd lvgl-bindings
 git submodule update --init lvgl
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
@@ -95,7 +95,7 @@ See `docs/circuitpython_spike.md` for spike layout details.
 | Build | `make` after `--apply` |
 
 ```bash
-cd lv_circuitpython_mod
+cd lvgl-circuitpython
 ./apply_cp_patches.sh --dry-run --port unix --variant coverage
 ./apply_cp_patches.sh --apply --port unix --variant coverage
 ./apply_cp_patches.sh --force-apply --port unix --variant coverage  # reinstall patches
@@ -106,7 +106,7 @@ make -j VARIANT=coverage
 Espressif example:
 
 ```bash
-cd lv_circuitpython_mod
+cd lvgl-circuitpython
 ./apply_cp_patches.sh --apply --port espressif --board adafruit_qualia_s3_rgb666
 cd ../circuitpython/ports/espressif
 . ./esp-idf/export.sh
@@ -116,10 +116,10 @@ make -j BOARD=adafruit_qualia_s3_rgb666
 Smoke test:
 
 ```bash
-./circuitpython/ports/unix/build-coverage/micropython ./lv_circuitpython_mod/tools/test_lvgl_cp_unix.py
+./circuitpython/ports/unix/build-coverage/micropython ./lvgl-circuitpython/tools/test_lvgl_cp_unix.py
 ```
 
-Prefer the unified smoke test directly: `lv_bindings/tools/test_lvgl_smoke.py`.
+Prefer the unified smoke test directly: `lvgl-bindings/tools/test_lvgl_smoke.py`.
 
 See the [cmods workspace](https://github.com/PyDevices/cmods) for an easier way to build this repo with other CircuitPython extensions.
 
@@ -142,11 +142,11 @@ See the [cmods workspace](https://github.com/PyDevices/cmods) for an easier way 
 | `src/circuitpython_spike/` | Hand-written `shared-bindings/lvgl` module templates |
 | `src/lv_mem_core_circuitpython.c` | GC-aware LVGL allocator |
 | `manifest.py` | Freezes `lib/display_driver.py` (optional freeze helper) |
-| `tools/test_lvgl_cp_unix.py` | Deprecated wrapper → `lv_bindings/tools/test_lvgl_smoke.py` |
+| `tools/test_lvgl_cp_unix.py` | Deprecated wrapper → `lvgl-bindings/tools/test_lvgl_smoke.py` |
 | `docs/` | Integration notes |
 
 See `docs/circuitpython_spike.md` for architecture details.
 
 ## Frozen Python
 
-`manifest.py` freezes `lib/display_driver.py`. Sync from lv_bindings with `./scripts/sync_from_lv_bindings.sh`. Point CircuitPython’s `FROZEN_MANIFEST` at a wrapper that `include()`s this file (and any upstream freeze you still need).
+`manifest.py` freezes `lib/display_driver.py`. Sync from lvgl-bindings with `./scripts/sync_from_lvgl_bindings.sh`. Point CircuitPython’s `FROZEN_MANIFEST` at a wrapper that `include()`s this file (and any upstream freeze you still need).

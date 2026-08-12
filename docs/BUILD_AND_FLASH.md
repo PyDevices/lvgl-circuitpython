@@ -1,6 +1,6 @@
 # CircuitPython + LVGL: build and flash notes
 
-Lessons from building and flashing **Adafruit Qualia S3 RGB666** (`adafruit_qualia_s3_rgb666`) with full LVGL (2026-07-20). Sibling-clone workflow: this repo next to `circuitpython/` and `lv_bindings/`.
+Lessons from building and flashing **Adafruit Qualia S3 RGB666** (`adafruit_qualia_s3_rgb666`) with full LVGL (2026-07-20). Sibling-clone workflow: this repo next to `circuitpython/` and `lvgl-bindings/`.
 
 ## Tooling locations
 
@@ -47,7 +47,7 @@ Documented in `circuitpython.mk`.
 
 IDF export owns `python3` (needed for `idf_component_manager`). CircuitPython recipes need `minify_html` etc. from the CP venv.
 
-**Fix:** After IDF export, set `PYTHON` to a venv that has CircuitPython `requirements-dev.txt` installed (for example `lv_circuitpython_mod/.venv/bin/python`). Do **not** put the venv’s `python3` first on `PATH` before IDF export — that breaks component manager.
+**Fix:** After IDF export, set `PYTHON` to a venv that has CircuitPython `requirements-dev.txt` installed (for example `lvgl-circuitpython/.venv/bin/python`). Do **not** put the venv’s `python3` first on `PATH` before IDF export — that breaks component manager.
 
 ### 3. `-Werror=suggest-attribute=format` on LVGL
 
@@ -55,7 +55,7 @@ IDF export owns `python3` (needed for `idf_component_manager`). CircuitPython re
 
 ### 4. Duplicate `gif.c` (AnimatedGIF vs LVGL)
 
-`lv_bindings/lv_conf.h` sets `LV_USE_GIF 1`, so LVGL’s `libs/gif/gif.c` is compiled. CircuitPython’s `CIRCUITPY_GIFIO` (defaults with displayio) vendors a colliding AnimatedGIF `gif.c`. The **bindings generator does not need changes** for this — it is a CircuitPython build conflict.
+`lvgl-bindings/lv_conf.h` sets `LV_USE_GIF 1`, so LVGL’s `libs/gif/gif.c` is compiled. CircuitPython’s `CIRCUITPY_GIFIO` (defaults with displayio) vendors a colliding AnimatedGIF `gif.c`. The **bindings generator does not need changes** for this — it is a CircuitPython build conflict.
 
 **Fix:** `apply_cp_patches.sh` forces `CIRCUITPY_GIFIO = 0` whenever `CIRCUITPY_LVGL=1` (shared `circuitpy_mpconfig.mk` and per-board enable block). After flipping GIFIO off on an existing build dir, delete stale genhdr:
 
@@ -213,7 +213,7 @@ Adafruit CircuitPython 10.2.1-dirty ... Adafruit-Qualia-S3-RGB666
 | Symptom | Likely cause | Action |
 |---------|--------------|--------|
 | `Argument list too long` / qstr | LVGL in `SRC_QSTR` | Ensure `filter-out $(LV_CP_LVGL_SOURCES)` patch |
-| `minify_html` missing | Wrong Python after IDF export | `PYTHON=…/lv_circuitpython_mod/.venv/bin/python` |
+| `minify_html` missing | Wrong Python after IDF export | `PYTHON=…/lvgl-circuitpython/.venv/bin/python` |
 | Duplicate `GIF_*` at link | GIFIO + LVGL gif | `CIRCUITPY_GIFIO = 0`; clean gifio genhdr |
 | `Too little flash` / 2MB region | Stock partition CSV still selected | CSV under `esp-idf-config/`; wipe `build-*/esp-idf` |
 | `0x08` / can’t sync esptool | App owns USB | Boot0+Reset → ROM (`303A:1001`) |
@@ -226,4 +226,4 @@ Adafruit CircuitPython 10.2.1-dirty ... Adafruit-Qualia-S3-RGB666
 ## Upstream / commit policy
 
 - Do **not** commit changes inside `circuitpython/` (or `micropython/`) unless explicitly overridden.
-- Durable fixes belong in `lv_circuitpython_mod/` (`apply_cp_patches.sh`, `circuitpython.mk`, `scripts/partitions-16MB-lvgl.csv`).
+- Durable fixes belong in `lvgl-circuitpython/` (`apply_cp_patches.sh`, `circuitpython.mk`, `scripts/partitions-16MB-lvgl.csv`).

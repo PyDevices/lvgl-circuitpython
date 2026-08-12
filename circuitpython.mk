@@ -2,15 +2,15 @@
 #
 # Include from a CircuitPython port Makefile after setting LV_CP_MOD_DIR:
 #
-#   LV_CP_MOD_DIR := $(abspath ../../lv_circuitpython_mod)   # adjust relative to port dir
+#   LV_CP_MOD_DIR := $(abspath ../../lvgl-circuitpython)   # adjust relative to port dir
 #   include $(LV_CP_MOD_DIR)/circuitpython.mk
 #
 # Requires:
-#   - lv_bindings/generated/lvgl_circuitpython.c (run lv_bindings/regenerate_lvcp.sh)
+#   - lvgl-bindings/generated/lvgl_circuitpython.c (run lvgl-bindings/regenerate_lvcp.sh)
 #   - CIRCUITPY_LVGL=1 in port config (unix variant or board mpconfigboard.mk)
 
 LV_CP_MOD_DIR ?= $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
-LV_BINDINGS_DIR ?= $(abspath $(LV_CP_MOD_DIR)/../lv_bindings)
+LV_BINDINGS_DIR ?= $(abspath $(LV_CP_MOD_DIR)/../lvgl-bindings)
 LVGL_DIR := $(LV_BINDINGS_DIR)/lvgl
 LVCP_C := $(LV_BINDINGS_DIR)/generated/lvgl_circuitpython.c
 
@@ -19,7 +19,7 @@ LV_CP_LVGL_SOURCES := $(shell find $(LVGL_DIR)/src -type f -name '*.c')
 LV_CP_LVGL_SOURCES := $(filter-out $(LVGL_DIR)/src/libs/tjpgd/tjpgd.c,$(LV_CP_LVGL_SOURCES))
 # CIRCUITPY_GIFIO vendors AnimatedGIF/gif.c — apply_cp_patches forces
 # CIRCUITPY_GIFIO=0 when CIRCUITPY_LVGL=1 so LVGL's libs/gif/gif.c (LV_USE_GIF)
-# can link. No lv_bindings generator change; constraint is build-side.
+# can link. No lvgl-bindings generator change; constraint is build-side.
 LV_CP_SOURCES := $(LV_CP_MOD_DIR)/src/lv_mem_core_circuitpython.c
 
 ifeq ($(wildcard $(LVCP_C)),)
