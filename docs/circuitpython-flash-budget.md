@@ -2,7 +2,8 @@
 
 Short review before the first on-tree CP build (P4 Function EV board).
 
-**Related:** `src/lv_mem_core_circuitpython.c`, `circuitpython.mk`, `docs/gc_callback_audit.md`.
+**Related:** `src/lv_mem_core_circuitpython.c`, `circuitpython.mk`, and the
+[binding GC audit](https://github.com/PyDevices/lvgl-bindings/blob/main/docs/gc-callback-audit.md).
 
 ---
 
@@ -29,7 +30,7 @@ Firmware partition size on ESP32 CP boards is typically **~2–4 MB** for the fa
 
 1. After first CP build with full bindings, note `make` output size / `idf.py size`.
 2. After full `lvcp.c` link, compare again; ensure partition headroom ≥ 512 KB for future growth.
-3. If tight on smaller boards later, plan `CIRCUITPY_LVGL_FULL` trim driven by `lvcp.c.json` (see `docs/circuitpython_spike.md`).
+3. If tight on smaller boards later, plan `CIRCUITPY_LVGL_FULL` trim driven by `lvcp.c.json` (see `docs/circuitpython-spike.md`).
 
 ---
 

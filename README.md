@@ -41,7 +41,7 @@ cd ..
 
 Install system build tools and cross-compilers **before** building CircuitPython. Follow CircuitPython’s own documentation — this repo does not install compilers or apt packages for you.
 
-- [circuitpython/BUILDING.md](https://github.com/adafruit/circuitpython/blob/main/BUILDING.md) in your clone
+- [circuitpython/building.md](https://github.com/adafruit/circuitpython/blob/main/building.md) in your clone
 - Adafruit Learn: [Building CircuitPython on Linux](https://learn.adafruit.com/building-circuitpython/linux) (or macOS / WSL as appropriate)
 
 Typical Linux setup includes packages such as `build-essential`, `cmake`, `python3`, and port-specific tools (for example `gcc-arm-none-eabi` and related newlib packages for `raspberrypi`). Exact packages depend on the port you build.
@@ -68,7 +68,7 @@ which arm-none-eabi-gcc       # should be under /opt/..., not /usr/bin
 
 Open a new terminal (or `source /etc/profile.d/arm-gnu-toolchain.sh`) before building.
 
-Create a Python venv for CircuitPython’s `requirements-dev.txt` (needed for `minify_html` and related tools). If `minify_html` fails to install, you may need Rust (see CircuitPython `BUILDING.md`).
+Create a Python venv for CircuitPython’s `requirements-dev.txt` (needed for `minify_html` and related tools). If `minify_html` fails to install, you may need Rust (see CircuitPython `building.md`).
 
 ```bash
 python3 -m venv .venv
@@ -84,7 +84,7 @@ describe adding `shared-bindings/` + `shared-module/` **inside** the CircuitPyth
 tree. This repo keeps those sources out-of-tree under `src/circuitpython_spike/`
 and applies them with `./apply_cp_patches.sh` into a local (uncommitted)
 CircuitPython clone — Adafruit has no separate out-of-tree C-module path.
-See `docs/circuitpython_spike.md` for spike layout details.
+See `docs/circuitpython-spike.md` for spike layout details.
 
 | Adafruit step | This repo |
 |---------------|-----------|
@@ -145,7 +145,7 @@ See the [cmods workspace](https://github.com/PyDevices/cmods) for an easier way 
 | `tools/test_lvgl_cp_unix.py` | Deprecated wrapper → `lvgl-bindings/tools/test_lvgl_smoke.py` |
 | `docs/` | Integration notes |
 
-See `docs/circuitpython_spike.md` for architecture details.
+See `docs/circuitpython-spike.md` for architecture details.
 
 ## Frozen Python
 

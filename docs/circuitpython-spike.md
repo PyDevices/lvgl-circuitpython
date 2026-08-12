@@ -41,7 +41,8 @@ Spike files to copy are listed in `src/circuitpython_spike/copy_manifest.txt`.
 2. `CIRCUITPY_LVGL=1` on the target board or unix variant (patch script adds this).
 3. Port `Makefile` includes `$(LV_CP_MOD_DIR)/circuitpython.mk` (patch script adds this).
 
-Display flush/tick: **ON HOLD** — not in these C files. See `docs/gc_callback_audit.md`.
+Display flush/tick: **ON HOLD** — not in these C files. See the binding
+[GC and callback lifetime audit](https://github.com/PyDevices/lvgl-bindings/blob/main/docs/gc-callback-audit.md).
 
 ## Merging generated bindings into the spike module
 
@@ -94,9 +95,9 @@ Re-run `regenerate_lvcp.sh` after LVGL header changes.
 
 1. **Single TU vs split:** One generated TU is simplest; split only if compile time hurts.
 2. **ROM budget:** Full API may exceed smaller boards — trim via metadata /
-   `CIRCUITPY_LVGL_FULL` later (see `docs/cp_flash_budget.md`).
-3. **GC roots:** Python callbacks stored only in LVGL `user_data` — see
-   `docs/gc_callback_audit.md`.
+   `CIRCUITPY_LVGL_FULL` later (see `docs/circuitpython-flash-budget.md`).
+3. **GC roots:** Python callbacks stored only in LVGL `user_data` — see the
+   binding [GC audit](https://github.com/PyDevices/lvgl-bindings/blob/main/docs/gc-callback-audit.md).
 4. **Display bridge:** **ON HOLD**.
 5. **Type checking:** Keep MP-style `mp_to_lv` validation or adopt CP
    `mp_arg_validate` where available.
