@@ -121,6 +121,24 @@ Smoke test:
 
 Prefer the unified smoke test directly: `lvgl-bindings/tools/test_lvgl_smoke.py`.
 
+## Runtime Usage & Timer Model
+
+CircuitPython does not provide `machine.Timer` or signal FFI. In CircuitPython, `display_driver` and `multimer` operate via cooperative `asyncio` or pumped timers:
+- Applications run `runtime.run_forever()` or an `asyncio` loop to continuously pump LVGL tasks and events.
+
+```python
+import display_driver  # noqa: F401 - initializes display and input
+import lvgl as lv
+from display_driver import runtime
+
+scr = lv.screen_active()
+label = lv.label(scr)
+label.set_text("Hello CircuitPython LVGL!")
+label.center()
+
+runtime.run_forever()
+```
+
 See the [cmods workspace](https://github.com/PyDevices/cmods) for an easier way to build this repo with other CircuitPython extensions.
 
 ## Environment variables
@@ -132,6 +150,7 @@ See the [cmods workspace](https://github.com/PyDevices/cmods) for an easier way 
 | `PORT` | (prompted or pass `--port`) |
 | `BOARD` | (prompted or pass `--board`) |
 | `VARIANT` | (prompted or pass `--variant`) |
+
 
 ## Files
 
