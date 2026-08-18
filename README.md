@@ -2,7 +2,7 @@
 
 CircuitPython integration for LVGL: tree patches, build glue, spike templates, and tests.
 
-This repo is a consumer/build repo for the LVGL stack. It consumes generated bindings from lvgl-bindings and rebuilds CircuitPython targets, but it does not publish its own package to TestPyPI; lvgl-python is the publishing endpoint for the family.
+This repo is a consumer/build repo for the LVGL stack: it consumes generated bindings from lvgl-bindings and rebuilds CircuitPython targets, but does not publish its own package. See [lvgl-bindings — The LVGL family](https://github.com/PyDevices/lvgl-bindings#the-lvgl-family) for how the family fits together.
 
 Requires sibling clones of [lvgl-bindings](https://github.com/PyDevices/lvgl-bindings) (generated `lvcp.c`) and [circuitpython](https://github.com/adafruit/circuitpython). Check out a [stable release tag](https://github.com/adafruit/circuitpython/releases) — pick the version yourself; this repo does not track a specific CircuitPython version.
 
@@ -84,7 +84,7 @@ describe adding `shared-bindings/` + `shared-module/` **inside** the CircuitPyth
 tree. This repo keeps those sources out-of-tree under `src/circuitpython_spike/`
 and applies them with `./apply_cp_patches.sh` into a local (uncommitted)
 CircuitPython clone — Adafruit has no separate out-of-tree C-module path.
-See `docs/circuitpython-spike.md` for spike layout details.
+See `src/circuitpython_spike/` for the spike layout.
 
 | Adafruit step | This repo |
 |---------------|-----------|
@@ -164,7 +164,7 @@ See the [cmods workspace](https://github.com/PyDevices/cmods) for an easier way 
 | `tools/test_lvgl_cp_unix.py` | Deprecated wrapper → `lvgl-bindings/tools/test_lvgl_smoke.py` |
 | `docs/` | Integration notes |
 
-See `docs/circuitpython-spike.md` for architecture details.
+See `src/circuitpython_spike/` for the spike layout and `docs/build-and-flash.md` for build details.
 
 ## Frozen Python
 
