@@ -32,10 +32,13 @@ CFLAGS += -DLV_CIRCUITPYTHON_BUILD=1
 CFLAGS += -I$(LV_BINDINGS_DIR) -I$(LVGL_DIR) -Wno-unused-function
 
 # LVGL + generated bindings: suppress -Werror noise from upstream/generated C.
+# -Wno-float-equal is CircuitPython-specific: it builds with -Werror=float-equal
+# where MicroPython does not, and upstream widgets (arc, chart) compare floats
+# directly. Scoped to these sources, never relaxed globally.
 LVGL_SUPPRESS_CFLAGS := -Wno-cast-align -Wno-nested-externs -Wno-unused-parameter \
 	-Wno-sign-compare -Wno-missing-prototypes -Wno-old-style-definition \
 	-Wno-float-conversion -Wno-double-promotion -Wno-shadow -Wno-type-limits \
-	-Wno-suggest-attribute=format
+	-Wno-suggest-attribute=format -Wno-float-equal
 
 # Spike module + generated bindings need LVGL headers during qstr/preprocess.
 # Include LVGL_SUPPRESS_CFLAGS: spike .c files include lvgl.h (inline headers trip -Werror=cast-align on RISC-V).
