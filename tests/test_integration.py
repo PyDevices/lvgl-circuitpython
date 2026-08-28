@@ -15,6 +15,7 @@ def test_generated_source_and_header_are_both_required():
     assert "generated/lvgl_circuitpython.c" in make
     assert "generated/lvgl_circuitpython.h" in make
     assert "LVGL_BINDINGS_COMMIT" in make
+    assert "regenerate_lvcp.sh" not in make
 
 
 def test_lifecycle_and_registration_have_single_owners():
@@ -34,3 +35,9 @@ def test_lifecycle_and_registration_have_single_owners():
 
 def test_no_consumer_smoke_wrapper_remains():
     assert not (ROOT / "tools" / "test_lvgl_cp_unix.py").exists()
+
+
+def test_patch_script_reports_success_without_legacy_regeneration_wrappers():
+    script = (ROOT / "apply_cp_patches.sh").read_text()
+    assert script.rstrip().endswith("exit 0")
+    assert "regenerate_lvcp.sh" not in script

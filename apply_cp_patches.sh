@@ -705,11 +705,8 @@ elif [ "$APPLY" = 1 ]; then
     log "Patches applied."
     log
     log "Next:"
-    if [[ -x "$WORKSPACE_DIR/lvgl-bindings/regenerate_lvcp.sh" ]]; then
-        log "  $WORKSPACE_DIR/lvgl-bindings/regenerate_lvcp.sh"
-    else
-        log "  (regenerate lvgl-bindings CircuitPython artifacts if needed)"
-    fi
     log "  $(build_next_cmd)"
     log "See https://github.com/PyDevices/cmods for an easier way to build with other extensions."
 fi
+
+exit 0

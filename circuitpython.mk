@@ -6,7 +6,7 @@
 #   include $(LV_CP_MOD_DIR)/circuitpython.mk
 #
 # Requires:
-#   - lvgl-bindings/generated/lvgl_circuitpython.c (run lvgl-bindings/regenerate_lvcp.sh)
+#   - exact pinned lvgl-bindings generated C and header artifacts
 #   - CIRCUITPY_LVGL=1 in port config (unix variant or board mpconfigboard.mk)
 
 LV_CP_MOD_DIR ?= $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
