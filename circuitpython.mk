@@ -13,6 +13,19 @@ LV_CP_MOD_DIR ?= $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
 LV_BINDINGS_DIR ?= $(abspath $(LV_CP_MOD_DIR)/../lvgl-bindings)
 LVGL_DIR := $(LV_BINDINGS_DIR)/lvgl
 LVCP_C := $(LV_BINDINGS_DIR)/generated/lvgl_circuitpython.c
+LVCP_H := $(LV_BINDINGS_DIR)/generated/lvgl_circuitpython.h
+LV_BINDINGS_PIN := $(strip $(shell cat $(LV_CP_MOD_DIR)/LVGL_BINDINGS_COMMIT 2>/dev/null))
+LV_BINDINGS_DIRTY := $(shell \
+	git -C $(LV_BINDINGS_DIR) cat-file -e $(LV_BINDINGS_PIN)^{commit} 2>/dev/null && \
+	git -C $(LV_BINDINGS_DIR) diff --quiet $(LV_BINDINGS_PIN) -- generated/lvgl_circuitpython.c generated/lvgl_circuitpython.h lvgl lv_conf.h && \
+	git -C $(LV_BINDINGS_DIR) diff --quiet -- generated/lvgl_circuitpython.c generated/lvgl_circuitpython.h lvgl lv_conf.h || echo 1)
+
+ifeq ($(LV_BINDINGS_PIN),)
+$(error Missing $(LV_CP_MOD_DIR)/LVGL_BINDINGS_COMMIT)
+endif
+ifneq ($(LV_BINDINGS_DIRTY),)
+$(error $(LV_BINDINGS_DIR) does not match pinned binding inputs $(LV_BINDINGS_PIN); check out that commit/tag or run scripts/sync_from_lvgl_bindings.sh with an exact ref)
+endif
 
 LV_CP_LVGL_SOURCES := $(shell find $(LVGL_DIR)/src -type f -name '*.c')
 # CP coverage (and jpegio) already link lib/tjpgd; LVGL's copy uses incompatible tjpgdcnf.
@@ -23,7 +36,10 @@ LV_CP_LVGL_SOURCES := $(filter-out $(LVGL_DIR)/src/libs/tjpgd/tjpgd.c,$(LV_CP_LV
 LV_CP_SOURCES := $(LV_CP_MOD_DIR)/src/lv_mem_core_circuitpython.c
 
 ifeq ($(wildcard $(LVCP_C)),)
-$(error $(LVCP_C) not found. Run $(LV_BINDINGS_DIR)/regenerate_lvcp.sh)
+$(error $(LVCP_C) not found. Run $(LV_BINDINGS_DIR)/regenerate_all.sh --target circuitpython)
+endif
+ifeq ($(wildcard $(LVCP_H)),)
+$(error $(LVCP_H) not found. Run $(LV_BINDINGS_DIR)/regenerate_all.sh --target circuitpython)
 endif
 LV_CP_SOURCES += $(LVCP_C)
 
@@ -57,4 +73,5 @@ SRC_C += $(LV_CP_LVGL_SOURCES) $(LV_CP_SOURCES)
 
 # Hand-written module registration lives in the CP tree:
 #   shared-bindings/lvgl/__init__.c  (spike; see src/circuitpython_spike/)
-# Generated API surface is in generated/lvgl_circuitpython.c; merge via LVCP_MODULE_GLOBALS in __init__.c.
+# Generated API surface and module object are declared by
+# generated/lvgl_circuitpython.h and defined by generated/lvgl_circuitpython.c.

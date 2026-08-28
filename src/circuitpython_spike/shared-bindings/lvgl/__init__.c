@@ -5,12 +5,10 @@
 #include "py/runtime.h"
 #include "py/obj.h"
 #include "shared-bindings/lvgl/__init__.h"
+#include "shared-module/lvgl/__init__.h"
 #include "generated/lvgl_circuitpython.h"
 
 extern void mp_lv_deinit_gc(void);
-
-void shared_modules_lvgl_init(void);
-void shared_modules_lvgl_deinit(void);
 
 static mp_obj_t lvgl_module_init_fn(void) {
     lvgl_init();

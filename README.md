@@ -4,7 +4,7 @@ CircuitPython integration for LVGL: tree patches, build glue, spike templates, a
 
 This repo is a consumer/build repo for the LVGL stack: it consumes generated bindings from lvgl-bindings and rebuilds CircuitPython targets, but does not publish its own package. See [lvgl-bindings — The LVGL family](https://github.com/PyDevices/lvgl-bindings#the-lvgl-family) for how the family fits together.
 
-Requires sibling clones of [lvgl-bindings](https://github.com/PyDevices/lvgl-bindings) (generated `lvcp.c`) and [circuitpython](https://github.com/adafruit/circuitpython). Check out a [stable release tag](https://github.com/adafruit/circuitpython/releases) — pick the version yourself; this repo does not track a specific CircuitPython version.
+Requires sibling clones of [lvgl-bindings](https://github.com/PyDevices/lvgl-bindings) and [circuitpython](https://github.com/adafruit/circuitpython). The generated source, generated header, LVGL pin, and configuration must match the exact bindings commit recorded in `LVGL_BINDINGS_COMMIT`.
 
 ## Workspace layout
 
@@ -33,7 +33,7 @@ cd lvgl-bindings
 git submodule update --init lvgl
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-./regenerate_lvcp.sh
+./regenerate_all.sh --target circuitpython
 cd ..
 ```
 
@@ -76,7 +76,17 @@ python3 -m venv .venv
 export PATH="$(pwd)/.venv/bin:$PATH"
 ```
 
-## Patch and build
+## Build with cmods
+
+The supported entry point is the sibling [cmods](https://github.com/PyDevices/cmods) workspace, which applies the patches and invokes CircuitPython's build tooling:
+
+```bash
+cd ../cmods
+./build_cp.sh --port unix --variant coverage
+./build_cp.sh --port espressif --board adafruit_qualia_s3_rgb666
+```
+
+## Direct patch and build
 
 Adafruit’s [Extending CircuitPython](https://learn.adafruit.com/extending-circuitpython)
 guide (and the [design guide — native modules](https://docs.circuitpython.org/en/latest/docs/design_guide.html))
@@ -116,10 +126,10 @@ make -j BOARD=adafruit_qualia_s3_rgb666
 Smoke test:
 
 ```bash
-./circuitpython/ports/unix/build-coverage/micropython ./lvgl-circuitpython/tools/test_lvgl_cp_unix.py
+./circuitpython/ports/unix/build-coverage/micropython ./lvgl-bindings/tools/test_lvgl_smoke.py
 ```
 
-Prefer the unified smoke test directly: `lvgl-bindings/tools/test_lvgl_smoke.py`.
+The smoke suite comes directly from the exact pinned bindings source; this repo does not duplicate or forward it.
 
 ## App Usage & Timer Model
 
@@ -156,16 +166,19 @@ See the [cmods workspace](https://github.com/PyDevices/cmods) for an easier way 
 
 | Path | Role |
 |------|------|
-| `circuitpython.mk` | Port Makefile fragment (LVGL + `lvcp.c` + allocator) |
+| `circuitpython.mk` | Port Makefile fragment (generated source/header + LVGL + allocator) |
 | `apply_cp_patches.sh` | Patch CP tree and copy spike templates (`--apply`, `--force-apply`, `--status`) |
 | `src/circuitpython_spike/` | Hand-written `shared-bindings/lvgl` module templates |
 | `src/lv_mem_core_circuitpython.c` | GC-aware LVGL allocator |
 | `manifest.py` | Freezes `lib/display_driver.py` (optional freeze helper) |
-| `tools/test_lvgl_cp_unix.py` | Deprecated wrapper → `lvgl-bindings/tools/test_lvgl_smoke.py` |
+| `LVGL_BINDINGS_COMMIT` | Exact generator/artifact source consumed by builds |
 | `docs/` | Integration notes |
 
 See `src/circuitpython_spike/` for the spike layout and `docs/build-and-flash.md` for build details.
 
 ## Frozen Python
 
-`manifest.py` freezes `lib/display_driver.py`. Sync from lvgl-bindings with `./scripts/sync_from_lvgl_bindings.sh`. Point CircuitPython’s `FROZEN_MANIFEST` at a wrapper that `include()`s this file (and any upstream freeze you still need).
+`manifest.py` freezes the Python helpers. The cmods aggregate manifest includes
+it together with the selected port/board upstream manifest. Sync helpers only
+from an exact bindings SHA or release tag with
+`./scripts/sync_from_lvgl_bindings.sh --ref <exact-ref>`.
