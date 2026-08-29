@@ -21,7 +21,7 @@ workspace/
 
 For day-to-day work, this repo is the place to patch CircuitPython’s LVGL integration, not the place to author the generator itself. The common loop is to change the patch set or the spike templates under **`src/`**, apply patches with **`./apply_cp_patches.sh --apply`**, rebuild with plain `make`, and smoke-test with the shared LVGL smoke script. If the underlying binding shape changed, regenerate **`lvgl-bindings`** first so the generated `lvcp.c` and header files stay in sync.
 
-## 🚀 First-time setup
+## First-time setup
 
 ```bash
 # Pick a stable release tag from https://github.com/adafruit/circuitpython/releases
