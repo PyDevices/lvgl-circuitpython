@@ -6,6 +6,8 @@ This repo is a consumer/build repo for the LVGL stack: it consumes generated bin
 
 Requires sibling clones of [lvgl-bindings](https://github.com/PyDevices/lvgl-bindings) and [circuitpython](https://github.com/adafruit/circuitpython). The generated source, generated header, LVGL pin, and configuration must match the exact bindings commit recorded in `LVGL_BINDINGS_COMMIT`.
 
+**Synced from lvgl-bindings:** `lib/display_driver.py` and `lib/fs_driver.py` are synced from [lvgl-bindings](https://github.com/PyDevices/lvgl-bindings) at the commit pinned in `LVGL_BINDINGS_COMMIT`, along with the generated bindings. Do not edit them here — change them in lvgl-bindings and re-sync.
+
 ## Workspace layout
 
 Place this repo as a sibling of `lvgl-bindings/` and `circuitpython/`:
