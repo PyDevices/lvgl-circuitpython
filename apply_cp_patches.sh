@@ -706,7 +706,7 @@ elif [ "$APPLY" = 1 ]; then
     log
     log "Next:"
     log "  $(build_next_cmd)"
-    log "See https://github.com/PyDevices/cmods for an easier way to build with other extensions."
+    log "The org's optional aggregator workspace (https://github.com/PyDevices/cmods) offers an easier way to build with other extensions."
 fi
 
 exit 0

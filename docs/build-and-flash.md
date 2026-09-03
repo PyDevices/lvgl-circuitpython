@@ -21,7 +21,7 @@ cd ../circuitpython/ports/espressif
 make -j BOARD=adafruit_qualia_s3_rgb666
 ```
 
-See the [cmods workspace](https://github.com/PyDevices/cmods) for an easier way to build this repo with other CircuitPython extensions.
+See the [org's optional aggregator workspace](https://github.com/PyDevices/cmods) for an easier way to build this repo with other CircuitPython extensions.
 
 ## Board detection pitfalls
 

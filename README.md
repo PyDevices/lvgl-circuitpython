@@ -78,9 +78,9 @@ python3 -m venv .venv
 export PATH="$(pwd)/.venv/bin:$PATH"
 ```
 
-## Build with cmods
+## Build with the org's aggregator workspace (optional)
 
-The supported entry point is the sibling [cmods](https://github.com/PyDevices/cmods) workspace, which applies the patches and invokes CircuitPython's build tooling:
+As an optional convenience, the org's sibling [aggregator workspace](https://github.com/PyDevices/cmods) applies the patches and invokes CircuitPython's build tooling for you:
 
 ```bash
 cd ../cmods
@@ -151,7 +151,7 @@ label.center()
 app.run()
 ```
 
-See the [cmods workspace](https://github.com/PyDevices/cmods) for an easier way to build this repo with other CircuitPython extensions.
+See the [org's optional aggregator workspace](https://github.com/PyDevices/cmods) for an easier way to build this repo with other CircuitPython extensions.
 
 ## Environment variables
 
@@ -180,7 +180,7 @@ See `src/circuitpython_spike/` for the spike layout and `docs/build-and-flash.md
 
 ## Frozen Python
 
-`manifest.py` freezes the Python helpers. The cmods aggregate manifest includes
+`manifest.py` freezes the Python helpers. An aggregator workspace's manifest includes
 it together with the selected port/board upstream manifest. Sync helpers only
 from an exact bindings SHA or release tag with
 `./scripts/sync_from_lvgl_bindings.sh --ref <exact-ref>`.
