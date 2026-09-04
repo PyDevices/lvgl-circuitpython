@@ -172,11 +172,31 @@ See the [org's optional aggregator workspace](https://github.com/PyDevices/cmods
 | `apply_cp_patches.sh` | Patch CP tree and copy spike templates (`--apply`, `--force-apply`, `--status`) |
 | `src/circuitpython_spike/` | Hand-written `shared-bindings/lvgl` module templates |
 | `src/lv_mem_core_circuitpython.c` | GC-aware LVGL allocator |
+| `src/lv_jpegio_decoder_circuitpython.c` | LVGL JPEG decoder over CircuitPython's own `lib/tjpgd` (the one `jpegio` uses); registered from the spike after `lv_init()` |
+| `tests/test_lvgl_jpeg_decode.py` | CircuitPython-side test: `lv.image` on the jpegio corpus vs. jpegio's golden digests (run with the built `circuitpython`) |
+| `tools/host_jpegio_decoder_check.sh` | Host proof of the decoder shim without a CircuitPython build: links LVGL + CP's `lib/tjpgd` + the shim, renders the corpus, compares digests |
 | `manifest.py` | Freezes `lib/display_driver.py` (optional freeze helper) |
 | `LVGL_BINDINGS_COMMIT` | Exact generator/artifact source consumed by builds |
 | `docs/` | Integration notes |
 
 See `src/circuitpython_spike/` for the spike layout and `docs/build-and-flash.md` for build details.
+
+## JPEG decoding
+
+One TJpgDec per firmware (org `docs/jpegio-vision.md`, Phase 2): the pinned
+lvgl-bindings `lv_conf.h` sets `LV_USE_TJPGD 0` on CircuitPython, so LVGL's
+`libs/tjpgd` compiles to nothing, and `src/lv_jpegio_decoder_circuitpython.c`
+registers CircuitPython's `lib/tjpgd` (compiled whenever `CIRCUITPY_JPEGIO=1`)
+as LVGL's JPEG decoder through the public `lv_image_decoder_create` API. Decoded
+images are `LV_COLOR_FORMAT_RGB565_SWAPPED`, exactly what `jpegio` produces
+(CP's `tjpgd.c` byte-swaps); LVGL's software renderer swaps them back onto an
+RGB565 display. The sniff is SOI-only, so non-JFIF UVC MJPEG frames decode;
+scale is always 0. A build without `CIRCUITPY_JPEGIO` still links -- it just
+has no JPEG decoder for LVGL. `lv.tjpgd_init` does not exist on CircuitPython.
+
+```bash
+bin/circuitpython tests/test_lvgl_jpeg_decode.py   # needs ../displayif (corpus) or JPEGIO_FRAMES=
+```
 
 ## Frozen Python
 

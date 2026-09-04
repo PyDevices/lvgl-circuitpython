@@ -41,3 +41,19 @@ def test_patch_script_reports_success_without_legacy_regeneration_wrappers():
     script = (ROOT / "apply_cp_patches.sh").read_text()
     assert script.rstrip().endswith("exit 0")
     assert "regenerate_lvcp.sh" not in script
+
+
+def test_jpegio_decoder_shim_is_wired():
+    make = (ROOT / "circuitpython.mk").read_text()
+    shim = ROOT / "src/lv_jpegio_decoder_circuitpython.c"
+    spike = (ROOT / "src/circuitpython_spike/shared-module/lvgl/__init__.c").read_text()
+    assert shim.is_file()
+    assert "src/lv_jpegio_decoder_circuitpython.c" in make
+    # LVGL's tjpgd.c is #if LV_USE_TJPGD, which is 0 on CircuitPython: no filter.
+    assert "filter-out $(LVGL_DIR)/src/libs/tjpgd/tjpgd.c" not in make
+    assert spike.count("lv_jpegio_decoder_circuitpython_init();") == 1
+    assert spike.index("lv_init();") < spike.index("lv_jpegio_decoder_circuitpython_init();")
+    text = shim.read_text()
+    assert "lv_image_decoder_create()" in text
+    assert "LV_COLOR_FORMAT_RGB565_SWAPPED" in text
+    assert "defined(CIRCUITPY_JPEGIO) && CIRCUITPY_JPEGIO" in text

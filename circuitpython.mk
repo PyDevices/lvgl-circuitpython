@@ -28,12 +28,19 @@ $(error $(LV_BINDINGS_DIR) does not match pinned binding inputs $(LV_BINDINGS_PI
 endif
 
 LV_CP_LVGL_SOURCES := $(shell find $(LVGL_DIR)/src -type f -name '*.c')
-# CP coverage (and jpegio) already link lib/tjpgd; LVGL's copy uses incompatible tjpgdcnf.
-LV_CP_LVGL_SOURCES := $(filter-out $(LVGL_DIR)/src/libs/tjpgd/tjpgd.c,$(LV_CP_LVGL_SOURCES))
+# One TJpgDec per firmware: CircuitPython's lib/tjpgd (compiled when
+# CIRCUITPY_JPEGIO=1) is the JPEG decoder; lvgl-bindings' lv_conf.h sets
+# LV_USE_TJPGD 0 on CircuitPython, so LVGL's libs/tjpgd/tjpgd.c and lv_tjpgd.c
+# (both #if LV_USE_TJPGD) compile to nothing and need no filter here.
+# src/lv_jpegio_decoder_circuitpython.c registers lib/tjpgd with LVGL through
+# lv_image_decoder_create (RGB565_SWAPPED, as jpegio outputs); the spike's
+# shared_modules_lvgl_init() calls it after lv_init(). It is a no-op TU when
+# CIRCUITPY_JPEGIO is 0 or undefined, so builds without jpegio still link.
 # CIRCUITPY_GIFIO vendors AnimatedGIF/gif.c — apply_cp_patches forces
 # CIRCUITPY_GIFIO=0 when CIRCUITPY_LVGL=1 so LVGL's libs/gif/gif.c (LV_USE_GIF)
 # can link. No lvgl-bindings generator change; constraint is build-side.
-LV_CP_SOURCES := $(LV_CP_MOD_DIR)/src/lv_mem_core_circuitpython.c
+LV_CP_SOURCES := $(LV_CP_MOD_DIR)/src/lv_mem_core_circuitpython.c \
+	$(LV_CP_MOD_DIR)/src/lv_jpegio_decoder_circuitpython.c
 
 ifeq ($(wildcard $(LVCP_C)),)
 $(error $(LVCP_C) not found. Run $(LV_BINDINGS_DIR)/regenerate_all.sh --target circuitpython)

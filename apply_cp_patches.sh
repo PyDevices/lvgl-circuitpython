@@ -535,6 +535,14 @@ PY
     else
         echo "pending  CIRCUITPY_GIFIO=0 when LVGL enabled"
     fi
+    # JPEG decoder for LVGL: src/lv_jpegio_decoder_circuitpython.c (built via
+    # circuitpython.mk, registered from the copied shared-module/lvgl/__init__.c;
+    # active only when the port/variant defines CIRCUITPY_JPEGIO=1).
+    if grep -qF 'lv_jpegio_decoder_circuitpython_init' "$CP_DIR/shared-module/lvgl/__init__.c" 2>/dev/null; then
+        echo "ok       jpegio decoder shim present (shared-module/lvgl/__init__.c registers lib/tjpgd with LVGL)"
+    else
+        echo "pending  jpegio decoder shim hook in shared-module/lvgl/__init__.c (re-run --apply)"
+    fi
     exit 0
 fi
 
