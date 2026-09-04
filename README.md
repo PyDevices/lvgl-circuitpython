@@ -173,7 +173,7 @@ See the [org's optional aggregator workspace](https://github.com/PyDevices/cmods
 | `src/circuitpython_spike/` | Hand-written `shared-bindings/lvgl` module templates |
 | `src/lv_mem_core_circuitpython.c` | GC-aware LVGL allocator |
 | `src/lv_jpegio_decoder_circuitpython.c` | LVGL JPEG decoder over CircuitPython's own `lib/tjpgd` (the one `jpegio` uses); registered from the spike after `lv_init()` |
-| `tests/test_lvgl_jpeg_decode.py` | CircuitPython-side test: `lv.image` on the jpegio corpus vs. jpegio's golden digests (run with the built `circuitpython`) |
+| `tests/test_lvgl_jpeg_decode.py` | CircuitPython-side test: `lv.image` on the jpegio corpus vs. jpegio's golden digests, plus CP's own `jpegio` -> `displayio.Bitmap` as a second witness (run with the built `circuitpython`; the witness skips the right-edge MCU block of odd widths, where CP's `bitmap_output()` mis-strides -- a CircuitPython bug, not the shim's) |
 | `tools/host_jpegio_decoder_check.sh` | Host proof of the decoder shim without a CircuitPython build: links LVGL + CP's `lib/tjpgd` + the shim, renders the corpus, compares digests |
 | `manifest.py` | Freezes `lib/display_driver.py` (optional freeze helper) |
 | `LVGL_BINDINGS_COMMIT` | Exact generator/artifact source consumed by builds |
@@ -190,8 +190,10 @@ registers CircuitPython's `lib/tjpgd` (compiled whenever `CIRCUITPY_JPEGIO=1`)
 as LVGL's JPEG decoder through the public `lv_image_decoder_create` API. Decoded
 images are `LV_COLOR_FORMAT_RGB565_SWAPPED`, exactly what `jpegio` produces
 (CP's `tjpgd.c` byte-swaps); LVGL's software renderer swaps them back onto an
-RGB565 display. The sniff is SOI-only, so non-JFIF UVC MJPEG frames decode;
-scale is always 0. A build without `CIRCUITPY_JPEGIO` still links -- it just
+RGB565 display. The sniff is SOI-only for both variable and file sources
+(`FF D8`, then `jd_prepare` judges; a file's extension is not consulted -- the
+rule displayif's shim applies on MicroPython, so both runtimes claim the same
+files), so non-JFIF UVC MJPEG frames decode; scale is always 0. A build without `CIRCUITPY_JPEGIO` still links -- it just
 has no JPEG decoder for LVGL. `lv.tjpgd_init` does not exist on CircuitPython.
 
 ```bash

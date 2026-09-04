@@ -9,8 +9,11 @@
 # source through a stdio lv_fs driver) and compares the flushed pixels against
 # jpegio's golden digests (displayif tests/jpegio/frames/golden_tjpgd.json,
 # scale 0). Frames the golden file knows must decode and match; the others
-# (progressive, DHT-less) must be refused. Also proves: exactly one jd_prepare
-# in the link (CP's), registration is idempotent, and re-arms after lv_deinit.
+# (progressive, DHT-less) must be refused; an extension-less copy of the C920e
+# frame must decode as a file source too (the sniff is SOI-only, never the
+# extension -- the rule displayif's shim applies on MicroPython). Also proves:
+# exactly one jd_prepare in the link (CP's), registration is idempotent, and
+# re-arms after lv_deinit.
 #
 #   ./tools/host_jpegio_decoder_check.sh
 #
@@ -87,9 +90,14 @@ if nm "$BUILD/host_check" | grep -q ' T lv_tjpgd_init$'; then echo "error: lv_tj
 OUT="$BUILD/out"
 rm -rf "$OUT"; mkdir -p "$OUT"
 mapfile -t JPGS < <(find "$FRAMES" -maxdepth 1 -name '*.jpg' | sort)
-echo "== decode ${#JPGS[@]} frames through lv_image (LVGL warnings go to $OUT/lvgl.log)"
+# The same C920e bytes under a name with no extension: the file-source path
+# must claim it by its SOI (the python check maps it back to the .jpg golden
+# and requires both the var and the file render).
+NOEXT="$OUT/c920e_320x240_dri"
+cp "$FRAMES/c920e_320x240_dri.jpg" "$NOEXT"
+echo "== decode ${#JPGS[@]} frames + 1 extension-less copy through lv_image (LVGL warnings go to $OUT/lvgl.log)"
 set +e
-"$BUILD/host_check" "$OUT" "${JPGS[@]}" 2> "$OUT/lvgl.log"
+"$BUILD/host_check" "$OUT" "${JPGS[@]}" "$NOEXT" 2> "$OUT/lvgl.log"
 rc=$?
 set -e
 echo "harness exit $rc"
@@ -99,12 +107,21 @@ python3 - "$OUT" "$FRAMES/golden_tjpgd.json" "$rc" <<'PY'
 import hashlib, json, os, sys
 out, golden_path, rc = sys.argv[1], sys.argv[2], int(sys.argv[3])
 golden = json.load(open(golden_path))["frames"]
+NOEXT = "c920e_320x240_dri"   # copy of c920e_320x240_dri.jpg saved without an extension
 files = sorted(f for f in os.listdir(out) if f.endswith(".rgb565"))
 seen = {}
+seen_noext = set()
 bad = 0
 for fn in files:
     mode, name = fn.split("_", 1)
     name = name[: -len(".rgb565")]
+    label = name
+    if name == NOEXT:
+        name = NOEXT + ".jpg"
+        label = NOEXT + " (no extension)"
+        seen_noext.add(mode)
+    else:
+        seen.setdefault(name, set()).add(mode)
     digest = hashlib.sha256(open(os.path.join(out, fn), "rb").read()).hexdigest()
     want = golden.get(name, {}).get("0")
     if want is None:
@@ -115,14 +132,17 @@ for fn in files:
     else:
         status = "MISMATCH (golden %s..)" % want[:16]
         bad += 1
-    seen.setdefault(name, set()).add(mode)
-    print("  %-5s %-36s %s.. %s" % (mode, name, digest[:16], status))
+    print("  %-5s %-36s %s.. %s" % (mode, label, digest[:16], status))
 for name in sorted(golden):
     for mode in ("var", "file"):
         if mode not in seen.get(name, ()):
             print("  %-5s %-36s MISSING: golden frame was not rendered" % (mode, name))
             bad += 1
-print("frames in golden: %d; rendered outputs: %d; problems: %d" % (len(golden), len(files), bad))
+for mode in ("var", "file"):
+    if mode not in seen_noext:
+        print("  %-5s %-36s MISSING: the extension-less copy was not rendered (the sniff must be SOI-only, not by extension)" % (mode, NOEXT + " (no extension)"))
+        bad += 1
+print("frames in golden: %d (+1 extension-less copy); rendered outputs: %d; problems: %d" % (len(golden), len(files), bad))
 sys.exit(1 if bad or rc else 0)
 PY
 echo "host jpegio decoder check passed"

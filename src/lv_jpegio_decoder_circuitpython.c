@@ -11,10 +11,11 @@
  * lv_tjpgd.c performs (lvgl/src/libs/tjpgd/lv_tjpgd.c, lv_tjpgd_init).
  *
  * Contract:
- *  - Sniff is SOI only (FF D8); jd_prepare judges the rest, so a UVC MJPEG
- *    frame that is not JFIF-first (SOI DQT SOF0 DHT ...) is accepted where
- *    LVGL's is_jpg() would refuse it. Baseline JPEG only: progressive, DHT-less
- *    and truncated frames fail in jd_prepare / jd_decomp and the open fails.
+ *  - Sniff is SOI only (FF D8) for both source kinds; jd_prepare judges the
+ *    rest, so a UVC MJPEG frame that is not JFIF-first (SOI DQT SOF0 DHT ...)
+ *    is accepted where LVGL's is_jpg() would refuse it. Baseline JPEG only:
+ *    progressive, DHT-less and truncated frames fail in jd_prepare / jd_decomp
+ *    and the open fails.
  *  - Output is exactly what CircuitPython's jpegio produces (decision D2):
  *    CP's lib/tjpgd/src/tjpgd.c byte-swaps its RGB565 (`__builtin_bswap16` in
  *    mcu_output), so the decoded image is labelled
@@ -25,7 +26,9 @@
  *    (like lv_lodepng.c); there is no get_area_cb.
  *  - Sources: LV_IMAGE_SRC_VARIABLE (an lv_image_dsc_t whose `data` holds the
  *    JPEG bytes; its header w/h/cf are not trusted, jd_prepare's are used) and
- *    LV_IMAGE_SRC_FILE (".jpg" / ".jpeg" through lv_fs).
+ *    LV_IMAGE_SRC_FILE (any lv_fs path whose first two bytes are FF D8 -- the
+ *    extension is not consulted, the rule displayif's shim applies on
+ *    MicroPython, so an extension-less camera dump decodes on both runtimes).
  *
  * Built only when CIRCUITPY_JPEGIO is 1, which is exactly when CircuitPython
  * compiles lib/tjpgd/src/tjpgd.c (py/circuitpy_defns.mk: `ifeq
@@ -96,7 +99,7 @@ static void decoder_close(lv_image_decoder_t * decoder, lv_image_decoder_dsc_t *
 static size_t input_func(JDEC * jd, uint8_t * buff, size_t ndata);
 static int output_func(JDEC * jd, void * bitmap, JRECT * rect);
 static bool has_soi(const uint8_t * data, size_t len);
-static bool has_jpeg_ext(const char * fn);
+static bool file_has_soi(lv_fs_file_t * file);
 static JRESULT prepare(JDEC * jd, void ** pool, jpegio_lv_ctx_t * ctx);
 static lv_image_decoder_t * find_registered(void);
 
@@ -153,20 +156,18 @@ static bool has_soi(const uint8_t * data, size_t len)
     return data != NULL && len >= 2 && data[0] == 0xFF && data[1] == 0xD8;
 }
 
-static bool has_jpeg_ext(const char * fn)
+/* File-source sniff, the same SOI-only rule as variable sources: the first two
+ * bytes must be FF D8. The name's extension is not consulted (an extension-less
+ * camera dump decodes; a ".jpg" that is not a JPEG is not claimed), which is
+ * what displayif's shim does on MicroPython too. Leaves the file at offset 0. */
+static bool file_has_soi(lv_fs_file_t * file)
 {
-    const char * ext = lv_fs_get_ext(fn);   /* "" when there is no '.' */
-    if(ext == NULL) return false;
-    /* Compare case-insensitively: "IMG.JPG" from a FAT volume is a JPEG too. */
-    char lower[5];
-    size_t i;
-    for(i = 0; i < sizeof(lower) - 1 && ext[i] != '\0'; i++) {
-        char c = ext[i];
-        lower[i] = (c >= 'A' && c <= 'Z') ? (char)(c - 'A' + 'a') : c;
-    }
-    lower[i] = '\0';
-    if(ext[i] != '\0') return false;   /* longer than "jpeg" */
-    return lv_strcmp(lower, "jpg") == 0 || lv_strcmp(lower, "jpeg") == 0;
+    uint8_t soi[2];
+    uint32_t rn = 0;
+    if(lv_fs_seek(file, 0, LV_FS_SEEK_SET) != LV_FS_RES_OK) return false;
+    if(lv_fs_read(file, soi, sizeof(soi), &rn) != LV_FS_RES_OK) return false;
+    if(!has_soi(soi, rn)) return false;
+    return lv_fs_seek(file, 0, LV_FS_SEEK_SET) == LV_FS_RES_OK;
 }
 
 /* TJpgDec stream input: fill `buff` with up to `ndata` bytes, or skip `ndata`
@@ -239,7 +240,7 @@ static bool ctx_from_src(lv_image_decoder_dsc_t * dsc, jpegio_lv_ctx_t * ctx, lv
         return true;
     }
     if(dsc->src_type == LV_IMAGE_SRC_FILE) {
-        if(!has_jpeg_ext(dsc->src)) return false;
+        if(file == NULL || !file_has_soi(file)) return false;
         ctx->file = file;
         return true;
     }
@@ -278,7 +279,6 @@ static lv_result_t decoder_open(lv_image_decoder_t * decoder, lv_image_decoder_d
     bool file_open = false;
 
     if(dsc->src_type == LV_IMAGE_SRC_FILE) {
-        if(!has_jpeg_ext(dsc->src)) return LV_RESULT_INVALID;
         if(lv_fs_open(&file, dsc->src, LV_FS_MODE_RD) != LV_FS_RES_OK) return LV_RESULT_INVALID;
         file_open = true;
     }

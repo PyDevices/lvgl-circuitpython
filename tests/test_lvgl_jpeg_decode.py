@@ -21,6 +21,15 @@ Checks, all plain asserts:
      jpegio.JpegDecoder decodes the same frame into a displayio.Bitmap (16-bit,
      documented RGB565_SWAPPED); the LVGL frame with each pixel's two bytes
      swapped must equal that bitmap row for row. This is D2 measured, not read.
+     Odd widths (odd_size_37x29.jpg) are compared only left of the right-edge
+     MCU column: CircuitPython's shared-module/jpegio/JpegDecoder.c
+     bitmap_output() sets the source stride to `src_width / 2` uint32 words,
+     which rounds an odd edge-block width down (5 px -> 4), so every row of
+     that block after the first is read one pixel further left than it should
+     be -- CP's own Bitmap is wrong there, the LVGL frame (== jpegio's golden,
+     a straight jd_decomp) is right. Measured on 10.2.1: 104 pixels differ,
+     all in columns 32..36, rows 1..28. An upstream CircuitPython bug, not
+     the shim's; the test asserts that the difference stays inside that block.
   4. The image widget takes its size from the JPEG, not from the descriptor
      header: a descriptor with header w/h = 0 and cf UNKNOWN (which LVGL's
      built-in bin decoder refuses, so no other decoder can size it) still
@@ -29,6 +38,11 @@ Checks, all plain asserts:
      decodes: the shim sniffs SOI only; LVGL's is_jpg() would have refused it.
   6. lv.deinit(); lv.init() re-registers the decoder (the frame decodes again),
      and a second lv.init() without deinit does not break it.
+  7. File sources through lib/fs_driver.py (this repo's synced copy, put on
+     sys.path): the C920e frame by its .jpg path, the same bytes copied to a
+     temporary file WITHOUT an extension (the sniff is SOI-only for files too,
+     the rule displayif's shim applies on MicroPython), both hashing to the
+     golden digest; a non-JPEG file (the corpus README) stays 0x0.
 
 Run with the unix CircuitPython built with CIRCUITPY_LVGL=1 and
 CIRCUITPY_JPEGIO=1 (the coverage variant has both) against lvgl-bindings at the
@@ -208,9 +222,22 @@ def main():
         status = "golden match" if digest == want else "GOLDEN MISMATCH (golden %s..)" % want[:16]
         witness = _cp_jpegio_bitmap_bytes(jpeg, w, h)
         swapped = _swap_pairs(frame)
-        same = swapped == witness
-        print("%-36s %3dx%-3d flushes %2d sha256 %s.. %s; bytes == jpegio bitmap (pair-swapped): %s" % (
-            name, w, h, display.flushes, digest[:16], status, same))
+        if w % 2 == 0:
+            same = swapped == witness
+            scope = "full width"
+        else:
+            # CP's bitmap_output mis-strides an odd-width right-edge MCU block
+            # (see the module docstring): compare left of that block, and
+            # require the mismatch to stay inside it.
+            edge = w - (w % 16)
+            same = all(swapped[(r * w) * 2 : (r * w + edge) * 2] == witness[(r * w) * 2 : (r * w + edge) * 2] for r in range(h))
+            outside_edge = same
+            inside_edge = any(swapped[(r * w + edge) * 2 : (r * w + w) * 2] != witness[(r * w + edge) * 2 : (r * w + w) * 2] for r in range(h))
+            scope = "columns 0..%d (CP Bitmap edge block %d..%d %s, its own jpegio bug)" % (
+                edge - 1, edge, w - 1, "differs" if inside_edge else "matches")
+            assert outside_edge, "%s: LVGL and CP's Bitmap differ left of the right-edge MCU block" % name
+        print("%-36s %3dx%-3d flushes %2d sha256 %s.. %s; bytes == jpegio bitmap (pair-swapped) over %s: %s" % (
+            name, w, h, display.flushes, digest[:16], status, scope, same))
         assert digest == want, "%s: LVGL frame digest differs from jpegio's golden at scale 0" % name
         assert same, "%s: LVGL's decoded pixels are not jpegio's RGB565_SWAPPED words" % name
 
@@ -233,6 +260,39 @@ def main():
         got_w, got_h = _render(lv, display, _image_dsc(lv, jpeg, 320, 240, lv.COLOR_FORMAT.UNKNOWN))
         assert (got_w, got_h) == (0, 0), "%s (%s) was accepted: %dx%d" % (name, why, got_w, got_h)
         print("%-36s refused (%s): lv.image stays 0x0, no crash" % (name, why))
+
+    # 7. file sources: .jpg path, an extension-less copy, and a non-JPEG file
+    print("== 7. file source through fs_driver: .jpg, extension-less copy, non-JPEG")
+    import os
+    import sys
+
+    lib = (__file__.rsplit("/", 1)[0] if "/" in __file__ else ".") + "/../lib"
+    if lib not in sys.path:
+        sys.path.append(lib)
+    import fs_driver
+
+    fs_driver.register("S")
+    name = "c920e_320x240_dri.jpg"
+    with open(frames_dir + "/" + name, "rb") as f:
+        jpeg = f.read()
+    got_w, got_h = _render(lv, display, "S:" + frames_dir + "/" + name)
+    assert (got_w, got_h) == (W, H), "file source %s: lv.image is %dx%d" % (name, got_w, got_h)
+    assert _sha256_hex(display.crop(W, H)) == golden[name]["0"], "file source %s: digest differs" % name
+    print("S:.../%s: %dx%d, digest matches" % (name, got_w, got_h))
+    getenv = getattr(os, "getenv", None)
+    tmp = ((getenv("TMPDIR") if getenv else None) or "/tmp") + "/lvgl_jpegio_noext_%d" % id(jpeg)
+    with open(tmp, "wb") as f:
+        f.write(jpeg)
+    try:
+        got_w, got_h = _render(lv, display, "S:" + tmp)
+        assert (got_w, got_h) == (W, H), "extension-less copy not claimed: lv.image is %dx%d" % (got_w, got_h)
+        assert _sha256_hex(display.crop(W, H)) == golden[name]["0"], "extension-less copy: digest differs"
+    finally:
+        os.remove(tmp)
+    print("the same bytes as an extension-less file: %dx%d, digest matches (sniffed by SOI, not by name)" % (got_w, got_h))
+    got_w, got_h = _render(lv, display, "S:" + frames_dir + "/README.md")
+    assert (got_w, got_h) == (0, 0), "a non-JPEG file was claimed: %dx%d" % (got_w, got_h)
+    print("a non-JPEG file (README.md) is not claimed: 0x0")
 
     # 6. deinit / init re-registers; a second init is harmless
     print("== 6. lv.deinit(); lv.init() and a repeated lv.init()")

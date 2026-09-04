@@ -57,3 +57,8 @@ def test_jpegio_decoder_shim_is_wired():
     assert "lv_image_decoder_create()" in text
     assert "LV_COLOR_FORMAT_RGB565_SWAPPED" in text
     assert "defined(CIRCUITPY_JPEGIO) && CIRCUITPY_JPEGIO" in text
+    # File sources are sniffed by their first two bytes, like variable sources
+    # and like displayif's shim on MicroPython -- never by extension.
+    assert "file_has_soi" in text
+    assert "lv_fs_get_ext" not in text
+    assert "has_jpeg_ext" not in text
