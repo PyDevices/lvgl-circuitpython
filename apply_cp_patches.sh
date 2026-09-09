@@ -62,6 +62,9 @@ MARKER_BEGIN="# >>> $MARKER_TAG"
 MARKER_END="# >>> lv-circuitpython-mod end"
 
 DRY_RUN=0
+# Nonzero if any dry-run check reports an ERROR: a dry run that says a patch
+# cannot be applied and then exits 0 tells an automated caller nothing.
+DRY_RC=0
 APPLY=0
 FORCE=0
 CONFIG_MKS=()
@@ -640,13 +643,13 @@ log
 # Required for ESP ARG_MAX; correct and cheap on unix and others too.
 log "==> Patch port Makefile (SRC_QSTR filter-out LVGL)"
 if [ "$DRY_RUN" = 1 ]; then
-    if grep -qE '^SRC_QSTR \+= \$\{?SRC_C\}?' "$PORT_MK" \
+    if grep -qE '^SRC_QSTR \+= \$[({]SRC_C[)}]' "$PORT_MK" \
         && ! grep -q 'filter-out \$(LV_CP_LVGL_SOURCES)' "$PORT_MK"; then
         echo "  [dry-run] would rewrite SRC_QSTR += \$(SRC_C) ... to filter-out LV_CP_LVGL_SOURCES"
     elif grep -q 'filter-out \$(LV_CP_LVGL_SOURCES)' "$PORT_MK"; then
         echo "  skip (already patched): $PORT_MK"
     else
-        echo "  [dry-run] ERROR: no SRC_QSTR += \$(SRC_C) line in $PORT_MK"
+        echo "  [dry-run] ERROR: no SRC_QSTR += \$(SRC_C) line in $PORT_MK"; DRY_RC=1
     fi
 else
     python3 - "$PORT_MK" <<'PY'
@@ -714,6 +717,8 @@ fi
 
 if [ "$DRY_RUN" = 1 ]; then
     log "Dry run complete. Re-run with --apply to write changes."
+    [ "$DRY_RC" = 0 ] || log "Dry run reported at least one ERROR above."
+    exit "$DRY_RC"
 elif [ "$APPLY" = 1 ]; then
     log "Patches applied."
     log
