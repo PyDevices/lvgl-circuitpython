@@ -499,17 +499,22 @@ p /= filename.strip()
 print(p)
 PY
 )
+    # Anything not in the state --apply would leave behind makes --status exit
+    # nonzero. It used to report the defect and exit 0, so a caller that
+    # checked $? read a broken tree as a good one - found by planting a fault
+    # in the pin move's step-0 rehearsal, 2026-09-09.
+    STATUS_RC=0
     report() {
         local label="$1"
         local file="$2"
         if [ ! -e "$file" ]; then
-            echo "missing  $file"
+            echo "missing  $file"; STATUS_RC=1
         elif [ "$label" = "spike" ]; then
             echo "ok       $file"
         elif patch_block_present "$file"; then
             echo "patched  $file"
         else
-            echo "pending  $file"
+            echo "pending  $file"; STATUS_RC=1
         fi
     }
     report spike "$SPIKE_INIT_C"
@@ -522,18 +527,18 @@ PY
     if grep -qF 'circuitpython.mk' "$PORT_MK" 2>/dev/null && grep -qF 'LV_CP_MOD_DIR' "$PORT_MK" 2>/dev/null; then
         echo "ok       port Makefile includes circuitpython.mk"
     else
-        echo "pending  port Makefile circuitpython.mk include"
+        echo "pending  port Makefile circuitpython.mk include"; STATUS_RC=1
     fi
     if grep -qF 'filter-out $(LV_CP_LVGL_SOURCES)' "$PORT_MK" 2>/dev/null; then
         echo "ok       port Makefile SRC_QSTR filters out LV_CP_LVGL_SOURCES"
     else
-        echo "pending  port Makefile SRC_QSTR filter-out LV_CP_LVGL_SOURCES"
+        echo "pending  port Makefile SRC_QSTR filter-out LV_CP_LVGL_SOURCES"; STATUS_RC=1
     fi
     if grep -qE 'CIRCUITPY_GIFIO[[:space:]]*=[[:space:]]*0' "$MPCONFIG_MK" 2>/dev/null \
         || { [[ ${#CONFIG_MKS[@]} -gt 0 ]] && grep -qE 'CIRCUITPY_GIFIO[[:space:]]*=[[:space:]]*0' "${CONFIG_MKS[@]}" 2>/dev/null; }; then
         echo "ok       CIRCUITPY_GIFIO=0 (mpconfig and/or board/variant)"
     else
-        echo "pending  CIRCUITPY_GIFIO=0 when LVGL enabled"
+        echo "pending  CIRCUITPY_GIFIO=0 when LVGL enabled"; STATUS_RC=1
     fi
     # JPEG decoder for LVGL: src/lv_jpegio_decoder_circuitpython.c (built via
     # circuitpython.mk, registered from the copied shared-module/lvgl/__init__.c;
@@ -541,9 +546,9 @@ PY
     if grep -qF 'lv_jpegio_decoder_circuitpython_init' "$CP_DIR/shared-module/lvgl/__init__.c" 2>/dev/null; then
         echo "ok       jpegio decoder shim present (shared-module/lvgl/__init__.c registers lib/tjpgd with LVGL)"
     else
-        echo "pending  jpegio decoder shim hook in shared-module/lvgl/__init__.c (re-run --apply)"
+        echo "pending  jpegio decoder shim hook in shared-module/lvgl/__init__.c (re-run --apply)"; STATUS_RC=1
     fi
-    exit 0
+    exit $STATUS_RC
 fi
 
 if [ "$FORCE" = 1 ]; then
