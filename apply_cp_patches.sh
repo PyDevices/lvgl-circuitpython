@@ -251,7 +251,16 @@ insert_block_before_line() {
         return 0
     fi
     if [ "$DRY_RUN" = 1 ]; then
-        echo "  [dry-run] insert block into $file before: $anchor"
+        if grep -qF "$anchor" "$file" 2>/dev/null; then
+            echo "  [dry-run] insert block into $file before: $anchor"
+        else
+            # The apply path fails here when the anchor is gone. The dry run
+            # used to print the same line either way, so a moved upstream
+            # anchor - the one thing a pin move must stop on - was invisible
+            # until the apply.
+            echo "  [dry-run] ERROR: anchor not found in $file: $anchor"
+            DRY_RC=1
+        fi
         return 0
     fi
     local begin end
@@ -289,7 +298,16 @@ insert_block_after_line() {
         return 0
     fi
     if [ "$DRY_RUN" = 1 ]; then
-        echo "  [dry-run] insert block into $file after: $anchor"
+        if grep -qF "$anchor" "$file" 2>/dev/null; then
+            echo "  [dry-run] insert block into $file after: $anchor"
+        else
+            # The apply path fails here when the anchor is gone. The dry run
+            # used to print the same line either way, so a moved upstream
+            # anchor - the one thing a pin move must stop on - was invisible
+            # until the apply.
+            echo "  [dry-run] ERROR: anchor not found in $file: $anchor"
+            DRY_RC=1
+        fi
         return 0
     fi
     local begin end
@@ -325,7 +343,16 @@ insert_raw_after_line() {
         return 0
     fi
     if [ "$DRY_RUN" = 1 ]; then
-        echo "  [dry-run] insert into $file after: $anchor"
+        if grep -qF "$anchor" "$file" 2>/dev/null; then
+            echo "  [dry-run] insert into $file after: $anchor"
+        else
+            # The apply path fails here when the anchor is gone. The dry run
+            # used to print the same line either way, so a moved upstream
+            # anchor - the one thing a pin move must stop on - was invisible
+            # until the apply.
+            echo "  [dry-run] ERROR: anchor not found in $file: $anchor"
+            DRY_RC=1
+        fi
         return 0
     fi
     python3 - "$file" "$anchor" "$line" <<'PY'
