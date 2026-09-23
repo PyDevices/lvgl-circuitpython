@@ -1,27 +1,27 @@
 # Newcomer's guide to lvgl-circuitpython
 
-`lvgl-circuitpython` integrates PyDevices' generated LVGL bindings into a CircuitPython firmware build. It supplies the out-of-tree patch and build glue, a GC-aware LVGL allocator, synced Python helpers, and a CircuitPython-specific JPEG decoder.
+`lvgl-circuitpython` integrates PyDevices' generated LVGL bindings into a
+CircuitPython firmware build. It supplies the out-of-tree patch and build glue,
+a GC-aware LVGL allocator, synced Python helpers, and a CircuitPython-specific
+JPEG decoder.
 
-It is not a pip package and does not generate the bindings. Work with sibling clones of [lvgl-bindings](https://github.com/PyDevices/lvgl-bindings) and [CircuitPython](https://github.com/adafruit/circuitpython); this repository consumes the exact bindings revision recorded in `LVGL_BINDINGS_COMMIT`.
+It is not a pip package and does not generate the bindings. Work with sibling
+clones of [lvgl-bindings](https://github.com/PyDevices/lvgl-bindings) and
+[CircuitPython](https://github.com/adafruit/circuitpython); this repository
+consumes the exact bindings revision recorded in `LVGL_BINDINGS_COMMIT`.
 
 ## First use: the firmware application
 
-After building firmware that includes this integration, initialize the display helper before importing and using LVGL:
+After building firmware that includes this integration, you import
+`display_driver` before `lvgl` and then run `app.run()` (or your own `asyncio`
+loop) to pump LVGL, because CircuitPython has no `machine.Timer` for this role.
+The README's [App Usage & Timer Model](../README.md#app-usage--timer-model) has
+the example.
 
-```python
-import display_driver  # initializes display and input
-import lvgl as lv
-from display_driver import app
-
-screen = lv.screen_active()
-label = lv.label(screen)
-label.set_text("Hello CircuitPython LVGL!")
-label.center()
-
-app.run()
-```
-
-CircuitPython has no `machine.Timer` or signal FFI for this role. `display_driver` and `multimer` use a cooperative event loop, so an application runs `app.run()` (or its own `asyncio` loop) to pump LVGL tasks and input events.
+`display_driver` imports pydevices' `appdev`, `events`, and `keys` (and
+`multimer` when it is present), plus a `board_config` unless your code has
+already created an `appdev.App`. Those are not part of this firmware, so they
+must be on the device too.
 
 ## The mental model
 
@@ -33,45 +33,56 @@ lvgl-circuitpython patch + build glue
                   |
                   +--> CircuitPython shared-bindings/shared-module/lvgl
                   +--> generated C source/header + allocator
-                  +--> frozen display_driver and fs_driver
+                  +--> manifest.py (freezes display_driver, fs_driver when
+                  |    the build passes it via FROZEN_MANIFEST)
                   |
                   v
 CircuitPython firmware: import display_driver, then import lvgl
 ```
 
-The generated source, header, LVGL pin, and configuration must all match the recorded bindings commit. Change generator-owned code and the synced Python helpers in `lvgl-bindings`, then regenerate and synchronize; do not edit their copied forms here.
+The generated source, header, LVGL pin, and configuration must all match the
+recorded bindings commit. Change generator-owned code and the synced Python
+helpers in `lvgl-bindings`, then regenerate and synchronize; do not edit their
+copied forms here.
 
 ## Repository map
 
-| Path | Role |
-|---|---|
-| `apply_cp_patches.sh` | Applies or previews the out-of-tree integration in a CircuitPython clone. |
-| `circuitpython.mk` | Port Makefile fragment for generated bindings, LVGL, and allocator sources. |
-| `src/circuitpython_spike/` | Hand-written `shared-bindings/lvgl` and `shared-module/lvgl` templates copied into CircuitPython. |
-| `src/lv_mem_core_circuitpython.c` | GC-aware LVGL allocator. |
-| `src/lv_jpegio_decoder_circuitpython.c` | LVGL decoder backed by CircuitPython's `jpegio`/TJpgDec support. |
-| `lib/display_driver.py`, `lib/fs_driver.py` | Synced helpers frozen by `manifest.py`. |
-| `scripts/sync_from_lvgl_bindings.sh` | Refreshes synced helpers from an exact bindings reference. |
-| `tests/` and `tools/` | Source-integration assertions and JPEG decoder checks. |
+The README's [Files](../README.md#files) table says what each path is for. The
+two you meet first are `apply_cp_patches.sh`, which patches a CircuitPython
+clone, and `circuitpython.mk`, the port Makefile fragment. The synced helpers
+are `lib/display_driver.py` and `lib/fs_driver.py`; `manifest.py` freezes them
+when the build names it in `FROZEN_MANIFEST`.
 
 ## Build boundary
 
-This repository patches a local, uncommitted CircuitPython tree because CircuitPython does not provide a separate out-of-tree C-module mechanism. The usual loop is:
+This repository patches a local, uncommitted CircuitPython tree because
+CircuitPython does not provide a separate out-of-tree C-module mechanism. The
+usual loop is:
 
 1. Regenerate the CircuitPython target in the pinned `lvgl-bindings` checkout when the binding shape changes.
 2. Preview or apply the patch, for example `./apply_cp_patches.sh --dry-run --port unix --variant coverage`.
-3. Build with CircuitPython's own `make`.
+3. Build with CircuitPython's own `make`, passing `FROZEN_MANIFEST` if you want the helpers frozen.
 4. Run the pinned binding smoke script against the resulting interpreter.
 
-The root [README](../README.md) has the exact setup, toolchain, Unix and Espressif commands. [Build and flash notes](build-and-flash.md) cover the Qualia S3 workflow. Keep the generated-binding smoke coverage in `lvgl-bindings`; this repository checks that its consumer integration is wired correctly.
+The root [README](../README.md) has the exact setup, toolchain, Unix and
+Espressif commands. [Build and flash notes](build-and-flash.md) cover the Qualia
+S3 workflow. Keep the generated-binding smoke coverage in `lvgl-bindings`; this
+repository checks that its consumer integration is wired correctly.
 
 ## JPEG and multi-module boundary
 
-LVGL's JPEG support here uses CircuitPython's `jpegio` implementation, not LVGL's bundled TJpgDec. When `CIRCUITPY_JPEGIO` is absent, the firmware still builds but does not register an LVGL JPEG decoder. PNG and LVGL BIN images do not need that optional piece.
+LVGL's JPEG support here uses CircuitPython's `jpegio` implementation, not
+LVGL's bundled TJpgDec. When `CIRCUITPY_JPEGIO` is absent, the firmware still
+builds but does not register an LVGL JPEG decoder. PNG and LVGL BIN images do
+not need that optional piece.
 
-Several PyDevices extensions can patch the same CircuitPython checkout. Apply each repository's `apply_cp_patches.sh` to that checkout, then run CircuitPython's `make` once; do not try to build them as independent C modules.
+To build this together with other PyDevices extensions, see the README's [Build
+with other extensions](../README.md#build-with-other-extensions).
 
 ## A safe first contribution
 
-Start with a focused change to the patch templates, allocator, or integration documentation. Run the patch script in `--dry-run` mode before applying it, keep the bindings pin aligned, and use the repository's source assertions plus the matching `lvgl-bindings` smoke suite for the affected target.
+Start with a focused change to the patch templates, allocator, or integration
+documentation. Run the patch script in `--dry-run` mode before applying it, keep
+the bindings pin aligned, and use the repository's source assertions plus the
+matching `lvgl-bindings` smoke suite for the affected target.
 
