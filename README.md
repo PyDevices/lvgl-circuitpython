@@ -78,15 +78,13 @@ python3 -m venv .venv
 export PATH="$(pwd)/.venv/bin:$PATH"
 ```
 
-## Build with the org's aggregator workspace (optional)
+## Build with other extensions
 
-As an optional convenience, the org's sibling [aggregator workspace](https://github.com/PyDevices/cmods) applies the patches and invokes CircuitPython's build tooling for you:
-
-```bash
-cd ../cmods
-./build_cp.sh --port unix --variant coverage
-./build_cp.sh --port espressif --board adafruit_qualia_s3_rgb666
-```
+Several out-of-tree extensions build into one CircuitPython image the same
+way this one does: run each repository's `apply_cp_patches.sh` against the
+same checkout (audiodsp, displayif and pygraphics carry one of the same
+shape), then run CircuitPython's own make once. The PyDevices workspace's
+`tools/build_interpreters.sh --only cp-unix` is exactly that sequence.
 
 ## Direct patch and build
 
@@ -151,7 +149,7 @@ label.center()
 app.run()
 ```
 
-See the [org's optional aggregator workspace](https://github.com/PyDevices/cmods) for an easier way to build this repo with other CircuitPython extensions.
+To build this repo together with other CircuitPython extensions, see [Build with other extensions](#build-with-other-extensions) above.
 
 ## Environment variables
 
