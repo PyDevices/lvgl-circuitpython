@@ -152,6 +152,10 @@ label.center()
 app.run()
 ```
 
+`display_driver` imports pydevices' `appdev`, `events`, and `keys` (and `multimer`
+when present), plus a `board_config` unless an `appdev.App` already exists; put
+those on the device too.
+
 To build this repo together with other CircuitPython extensions, see [Build with other extensions](#build-with-other-extensions) above.
 
 ## Environment variables
