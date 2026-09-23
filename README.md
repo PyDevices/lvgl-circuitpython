@@ -2,6 +2,9 @@
 
 CircuitPython integration for LVGL: tree patches, build glue, spike templates, and tests.
 
+New here? Read the [newcomer's guide](docs/newcomers.md) for the firmware
+entrypoint, generated-bindings boundary, and integration map.
+
 This repo is a consumer/build repo for the LVGL stack: it consumes generated bindings from lvgl-bindings and rebuilds CircuitPython targets, but does not publish its own package. See [lvgl-bindings — The LVGL family](https://github.com/PyDevices/lvgl-bindings#the-lvgl-family) for how the family fits together.
 
 Requires sibling clones of [lvgl-bindings](https://github.com/PyDevices/lvgl-bindings) and [circuitpython](https://github.com/adafruit/circuitpython). The generated source, generated header, LVGL pin, and configuration must match the exact bindings commit recorded in `LVGL_BINDINGS_COMMIT`.
