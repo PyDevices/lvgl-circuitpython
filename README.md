@@ -88,8 +88,7 @@ export PATH="$(pwd)/.venv/bin:$PATH"
 Several out-of-tree extensions build into one CircuitPython image the same
 way this one does: run each repository's `apply_cp_patches.sh` against the
 same checkout (audiodsp, displayif and pygraphics carry one of the same
-shape), then run CircuitPython's own make once. The PyDevices workspace's
-`tools/build_interpreters.sh --only cp-unix` is exactly that sequence.
+shape), then run CircuitPython's own make once.
 
 ## Direct patch and build
 
@@ -213,3 +212,5 @@ bin/circuitpython tests/test_lvgl_jpeg_decode.py   # needs ../displayif (corpus)
 it together with the selected port/board upstream manifest. Sync helpers only
 from an exact bindings SHA or release tag with
 `./scripts/sync_from_lvgl_bindings.sh --ref <exact-ref>`.
+
+What's planned next is in [ROADMAP.md](ROADMAP.md).
