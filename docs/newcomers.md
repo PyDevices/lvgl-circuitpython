@@ -18,10 +18,10 @@ loop) to pump LVGL, because CircuitPython has no `machine.Timer` for this role.
 The README's [App Usage & Timer Model](../README.md#app-usage--timer-model) has
 the example.
 
-`display_driver` imports pydevices' `appdev`, `events`, and `keys` (and
-`multimer` when it is present), plus a `board_config` unless your code has
-already created an `appdev.App`. Those are not part of this firmware, so they
-must be on the device too.
+`display_driver` is pydevices', not this firmware's: it comes with pydevices,
+beside the `appdev`, `events`, `keys` and `multimer` it imports, and wants a
+`board_config` unless your code has already created an `appdev.App`. Put
+pydevices (as source) and the board config on the device.
 
 ## The mental model
 
@@ -33,25 +33,25 @@ lvgl-circuitpython patch + build glue
                   |
                   +--> CircuitPython shared-bindings/shared-module/lvgl
                   +--> generated C source/header + allocator
-                  +--> manifest.py (freezes display_driver, fs_driver when
-                  |    the build passes it via FROZEN_MANIFEST)
+                  +--> manifest.py (freezes fs_driver when the build
+                  |    passes it via FROZEN_MANIFEST)
                   |
                   v
-CircuitPython firmware: import display_driver, then import lvgl
+CircuitPython firmware + pydevices: import display_driver, then import lvgl
 ```
 
 The generated source, header, LVGL pin, and configuration must all match the
 recorded bindings commit. Change generator-owned code and the synced Python
-helpers in `lvgl-bindings`, then regenerate and synchronize; do not edit their
+helper in `lvgl-bindings`, then regenerate and synchronize; do not edit their
 copied forms here.
 
 ## Repository map
 
 The README's [Files](../README.md#files) table says what each path is for. The
 two you meet first are `apply_cp_patches.sh`, which patches a CircuitPython
-clone, and `circuitpython.mk`, the port Makefile fragment. The synced helpers
-are `lib/display_driver.py` and `lib/fs_driver.py`; `manifest.py` freezes them
-when the build names it in `FROZEN_MANIFEST`.
+clone, and `circuitpython.mk`, the port Makefile fragment. The synced helper
+is `lib/fs_driver.py`; `manifest.py` freezes it when the build names it in
+`FROZEN_MANIFEST`.
 
 ## Build boundary
 

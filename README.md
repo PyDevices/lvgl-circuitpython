@@ -9,7 +9,9 @@ This repo is a consumer/build repo for the LVGL stack: it consumes generated bin
 
 Requires sibling clones of [lvgl-bindings](https://github.com/PyDevices/lvgl-bindings) and [circuitpython](https://github.com/adafruit/circuitpython). The generated source, generated header, LVGL pin, and configuration must match the exact bindings commit recorded in `LVGL_BINDINGS_COMMIT`.
 
-**Synced from lvgl-bindings:** `lib/display_driver.py` and `lib/fs_driver.py` are synced from [lvgl-bindings](https://github.com/PyDevices/lvgl-bindings) at the commit pinned in `LVGL_BINDINGS_COMMIT`, along with the generated bindings. Do not edit them here — change them in lvgl-bindings and re-sync.
+**Synced from lvgl-bindings:** `lib/fs_driver.py` is synced from [lvgl-bindings](https://github.com/PyDevices/lvgl-bindings) at the commit pinned in `LVGL_BINDINGS_COMMIT`, along with the generated bindings. Do not edit it here — change it in lvgl-bindings and re-sync.
+
+**`display_driver` is not here.** LVGL's PyDevices coordinator lives in [pydevices `lib/`](https://github.com/PyDevices/pydevices/blob/main/lib/display_driver.py) and comes with `pydevices`, beside the `appdev`, `events`, `keys` and `multimer` it needs. On CircuitPython, install pydevices as source (`--no-mpy`) onto `CIRCUITPY`.
 
 ## Workspace layout
 
@@ -152,9 +154,9 @@ label.center()
 app.run()
 ```
 
-`display_driver` imports pydevices' `appdev`, `events`, and `keys` (and `multimer`
-when present), plus a `board_config` unless an `appdev.App` already exists; put
-those on the device too.
+`display_driver` comes with pydevices, beside the `appdev`, `events`, `keys` and
+`multimer` it imports, and wants a `board_config` unless an `appdev.App` already
+exists; put pydevices and the board config on the device.
 
 To build this repo together with other CircuitPython extensions, see [Build with other extensions](#build-with-other-extensions) above.
 
@@ -180,7 +182,7 @@ To build this repo together with other CircuitPython extensions, see [Build with
 | `src/lv_jpegio_decoder_circuitpython.c` | LVGL JPEG decoder over CircuitPython's own `lib/tjpgd` (the one `jpegio` uses); registered from the spike after `lv_init()` |
 | `tests/test_lvgl_jpeg_decode.py` | CircuitPython-side test: `lv.image` on the jpegio corpus vs. jpegio's golden digests, plus CP's own `jpegio` -> `displayio.Bitmap` as a second witness (run with the built `circuitpython`; the witness skips the right-edge MCU block of odd widths, where CP's `bitmap_output()` mis-strides -- a CircuitPython bug, not the shim's) |
 | `tools/host_jpegio_decoder_check.sh` | Host proof of the decoder shim without a CircuitPython build: links LVGL + CP's `lib/tjpgd` + the shim, renders the corpus, compares digests |
-| `manifest.py` | Freezes `lib/display_driver.py` (optional freeze helper) |
+| `manifest.py` | Freezes `lib/fs_driver.py` (optional freeze helper) |
 | `LVGL_BINDINGS_COMMIT` | Exact generator/artifact source consumed by builds |
 | `docs/` | Integration notes |
 
