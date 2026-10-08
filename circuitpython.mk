@@ -40,7 +40,8 @@ LV_CP_LVGL_SOURCES := $(shell find $(LVGL_DIR)/src -type f -name '*.c')
 # CIRCUITPY_GIFIO=0 when CIRCUITPY_LVGL=1 so LVGL's libs/gif/gif.c (LV_USE_GIF)
 # can link. No lvgl-bindings generator change; constraint is build-side.
 LV_CP_SOURCES := $(LV_CP_MOD_DIR)/src/lv_mem_core_circuitpython.c \
-	$(LV_CP_MOD_DIR)/src/lv_jpegio_decoder_circuitpython.c
+	$(LV_CP_MOD_DIR)/src/lv_jpegio_decoder_circuitpython.c \
+	$(LV_CP_MOD_DIR)/src/lv_assert_circuitpython.c
 
 ifeq ($(wildcard $(LVCP_C)),)
 $(error $(LVCP_C) not found. Run $(LV_BINDINGS_DIR)/regenerate_all.sh --target circuitpython)
