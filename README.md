@@ -13,6 +13,28 @@ Requires sibling clones of [lvgl-bindings](https://github.com/PyDevices/lvgl-bin
 
 **`display_driver` is not here.** LVGL's PyDevices coordinator lives in [pydevices `lib/`](https://github.com/PyDevices/pydevices/blob/main/lib/display_driver.py) and comes with `pydevices`, beside the `appdev`, `events`, `keys` and `multimer` it needs. On CircuitPython, install pydevices as source (`--no-mpy`) onto `CIRCUITPY`.
 
+## Build it as a user C module
+
+CircuitPython 11 builds user C modules the way MicroPython does, so you can
+hand this directory to any port's `make` without patching CircuitPython:
+
+```bash
+make -C circuitpython/ports/unix USER_C_MODULES=/path/to/lvgl-circuitpython
+make -C circuitpython/ports/raspberrypi BOARD=<board> CIRCUITPY_GIFIO=0 \
+    USER_C_MODULES=/path/to/lvgl-circuitpython
+```
+
+`CIRCUITPY_GIFIO=0` is for boards: LVGL links its own AnimatedGIF decoder,
+which collides with `gifio`'s. A sibling `lvgl-bindings/` checkout at the
+commit in `LVGL_BINDINGS_COMMIT` is used if there is one; otherwise the build
+fetches that commit into `.deps/`. LVGL adds about 1 MB of firmware, more than
+most boards' default firmware region holds, and its qstrs need CircuitPython's
+four-byte qstr offsets (`MICROPY_QSTR_OFFSET_BYTES`, set by `micropython.mk`)
+where a port has them. The glue is [micropython.mk](micropython.mk).
+
+The patch-script route below (`apply_cp_patches.sh`, for CircuitPython 10.x)
+still works.
+
 ## Workspace layout
 
 Place this repo as a sibling of `lvgl-bindings/` and `circuitpython/`:

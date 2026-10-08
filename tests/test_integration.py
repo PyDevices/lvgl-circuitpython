@@ -62,3 +62,25 @@ def test_jpegio_decoder_shim_is_wired():
     assert "file_has_soi" in text
     assert "lv_fs_get_ext" not in text
     assert "has_jpeg_ext" not in text
+
+
+def test_user_c_module_keeps_lvgl_out_of_the_qstr_scan():
+    make = (ROOT / "micropython.mk").read_text()
+    # LVGL has no MP_QSTR_*: compiled and linked, never scanned.
+    assert "SRC_USERMOD_LIB_C += $(LVCP_LVGL_SOURCES)" in make
+    assert "SRC_USERMOD_C += $(LVCP_SOURCES)" in make
+    assert "generated/lvgl_circuitpython.c" in make
+    assert "LVGL_BINDINGS_COMMIT" in make
+    # gifio's AnimatedGIF collides with LVGL's at link time: stop early.
+    assert "ifeq ($(CIRCUITPY_GIFIO),1)" in make
+    # The board ports' late -Werror flags lose to per-object flags only.
+    assert "CFLAGS += $(LVCP_OBJ_CFLAGS)" in make
+
+
+def test_a_reload_drops_lvgl_state_from_the_previous_vm():
+    shared_bindings = (
+        ROOT / "src/circuitpython_spike/shared-bindings/lvgl/__init__.c"
+    ).read_text()
+    assert "MP_REGISTER_MODULE_DELEGATION(lvgl_module, lvgl_module_attr);" in shared_bindings
+    assert "attr == MP_QSTR___init__" in shared_bindings
+    assert "mp_lv_deinit_gc();" in shared_bindings

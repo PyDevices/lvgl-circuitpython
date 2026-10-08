@@ -12,3 +12,6 @@ dist/
 # Cursor IDE throwaways (do not ignore the whole .cursor/ tree)
 .cursor/debug*
 .cursor/plans/
+
+# lvgl-bindings fetched by scripts/fetch_bindings.sh for a clone on its own
+.deps/
