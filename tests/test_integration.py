@@ -84,6 +84,9 @@ def test_a_reload_drops_lvgl_state_from_the_previous_vm():
     assert "MP_REGISTER_MODULE_DELEGATION(lvgl_module, lvgl_module_attr);" in shared_bindings
     assert "attr == MP_QSTR___init__" in shared_bindings
     assert "mp_lv_deinit_gc();" in shared_bindings
+    # Built-ins stay out of sys.modules, so without this every `import lvgl`
+    # would run __init__ again and drop live state.
+    assert "MP_STATE_VM(mp_loaded_modules_dict)" in shared_bindings
 
 
 def test_an_lvgl_failure_never_spins_a_board_off_usb():
