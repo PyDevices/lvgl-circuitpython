@@ -84,3 +84,14 @@ def test_a_reload_drops_lvgl_state_from_the_previous_vm():
     assert "MP_REGISTER_MODULE_DELEGATION(lvgl_module, lvgl_module_attr);" in shared_bindings
     assert "attr == MP_QSTR___init__" in shared_bindings
     assert "mp_lv_deinit_gc();" in shared_bindings
+
+
+def test_an_lvgl_failure_never_spins_a_board_off_usb():
+    mem = (ROOT / "src/lv_mem_core_circuitpython.c").read_text()
+    # NULL, not MemoryError: an exception would longjmp out of LVGL's C.
+    assert "m_malloc_maybe(size)" in mem
+    assert "m_realloc_maybe(p, new_size, true)" in mem
+    handler = (ROOT / "src/lv_assert_circuitpython.c").read_text()
+    assert "reset_into_safe_mode(SAFE_MODE_SDK_FATAL_ERROR)" in handler
+    assert "src/lv_assert_circuitpython.c" in (ROOT / "micropython.mk").read_text()
+    assert "src/lv_assert_circuitpython.c" in (ROOT / "circuitpython.mk").read_text()

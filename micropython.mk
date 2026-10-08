@@ -85,14 +85,16 @@ SRC_USERMOD_LIB_C += $(LVCP_LVGL_SOURCES)
 
 # The CircuitPython side: the module (registered with MP_REGISTER_MODULE in
 # shared-bindings/lvgl/__init__.c), the generated bindings, LVGL's allocator on
-# CircuitPython's heap, and LVGL's JPEG decoder on CircuitPython's TJpgDec (a
-# no-op without jpegio). These are scanned for qstrs.
+# CircuitPython's heap, LVGL's JPEG decoder on CircuitPython's TJpgDec (a no-op
+# without jpegio), and what an LVGL assertion does (safe mode, not a hang).
+# These are scanned for qstrs.
 LVCP_SPIKE := $(LVCP_DIR)/src/circuitpython_spike
 LVCP_SOURCES := \
 	$(LVCP_SPIKE)/shared-bindings/lvgl/__init__.c \
 	$(LVCP_SPIKE)/shared-module/lvgl/__init__.c \
 	$(LVCP_DIR)/src/lv_mem_core_circuitpython.c \
 	$(LVCP_DIR)/src/lv_jpegio_decoder_circuitpython.c \
+	$(LVCP_DIR)/src/lv_assert_circuitpython.c \
 	$(LVCP_C)
 SRC_USERMOD_C += $(LVCP_SOURCES)
 

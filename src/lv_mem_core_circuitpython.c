@@ -70,7 +70,12 @@ void *lv_malloc_core(size_t size)
      * dereferencing a bogus mp_obj type pointer and crashing (SIGSEGV). */
     return gc_alloc(size, false);
 #else
-    return m_malloc(size);
+    /* The _maybe allocators return NULL when the heap is full; m_malloc would
+     * raise MemoryError, a longjmp straight out of LVGL's C that leaves a
+     * refresh half done (its flushing and rendering flags set) for the next
+     * pass to spin on. With NULL, LVGL fails the way it was written to:
+     * LV_ASSERT_MALLOC, which lv_assert_circuitpython.c turns into safe mode. */
+    return m_malloc_maybe(size);
 #endif
 }
 
@@ -79,7 +84,7 @@ void *lv_realloc_core(void *p, size_t new_size)
 #if MICROPY_MALLOC_USES_ALLOCATED_SIZE
     return gc_realloc(p, new_size, true);
 #else
-    return m_realloc(p, new_size);
+    return m_realloc_maybe(p, new_size, true);
 #endif
 }
 
