@@ -98,3 +98,12 @@ def test_an_lvgl_failure_never_spins_a_board_off_usb():
     assert "reset_into_safe_mode(SAFE_MODE_SDK_FATAL_ERROR)" in handler
     assert "src/lv_assert_circuitpython.c" in (ROOT / "micropython.mk").read_text()
     assert "src/lv_assert_circuitpython.c" in (ROOT / "circuitpython.mk").read_text()
+
+
+def test_a_supplied_checkout_builds_as_it_is():
+    # Only the copy fetched at the pin must match it; LV_BINDINGS_DIR or a
+    # sibling checkout that has moved on gets a note, not an error.
+    for name in ("micropython.mk", "circuitpython.mk"):
+        text = (ROOT / name).read_text()
+        assert "Building it as it is" in text
+        assert "does not match pinned binding inputs" not in text or name == "micropython.mk"

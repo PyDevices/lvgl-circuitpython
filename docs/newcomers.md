@@ -7,8 +7,9 @@ JPEG decoder.
 
 It is not a pip package and does not generate the bindings. Work with sibling
 clones of [lvgl-bindings](https://github.com/PyDevices/lvgl-bindings) and
-[CircuitPython](https://github.com/adafruit/circuitpython); this repository
-consumes the exact bindings revision recorded in `LVGL_BINDINGS_COMMIT`.
+[CircuitPython](https://github.com/adafruit/circuitpython). The bindings
+revision this repository is tested with is recorded in `LVGL_BINDINGS_COMMIT`;
+a checkout at another commit builds with a note saying so.
 
 ## First use: the firmware application
 
