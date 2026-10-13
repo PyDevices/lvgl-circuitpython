@@ -7,7 +7,7 @@ entrypoint, generated-bindings boundary, and integration map.
 
 This repo is a consumer/build repo for the LVGL stack: it consumes generated bindings from lvgl-bindings and rebuilds CircuitPython targets, but does not publish its own package. See [lvgl-bindings — The LVGL family](https://github.com/PyDevices/lvgl-bindings#the-lvgl-family) for how the family fits together.
 
-Requires sibling clones of [lvgl-bindings](https://github.com/PyDevices/lvgl-bindings) and [circuitpython](https://github.com/adafruit/circuitpython). The generated source, generated header, LVGL pin, and configuration must match the exact bindings commit recorded in `LVGL_BINDINGS_COMMIT`.
+Builds against [lvgl-bindings](https://github.com/PyDevices/lvgl-bindings) and [circuitpython](https://github.com/adafruit/circuitpython). The bindings come from `LV_BINDINGS_DIR` if you set it, else an `lvgl-bindings` checkout beside this repo, else the commit in `LVGL_BINDINGS_COMMIT`, which the user C module build fetches. A checkout you supply is built as it is, with a note when it isn't the pinned commit.
 
 **Synced from lvgl-bindings:** `lib/fs_driver.py` is synced from [lvgl-bindings](https://github.com/PyDevices/lvgl-bindings) at the commit pinned in `LVGL_BINDINGS_COMMIT`, along with the generated bindings. Do not edit it here — change it in lvgl-bindings and re-sync.
 
@@ -25,9 +25,11 @@ make -C circuitpython/ports/raspberrypi BOARD=<board> CIRCUITPY_GIFIO=0 \
 ```
 
 `CIRCUITPY_GIFIO=0` is for boards: LVGL links its own AnimatedGIF decoder,
-which collides with `gifio`'s. A sibling `lvgl-bindings/` checkout at the
-commit in `LVGL_BINDINGS_COMMIT` is used if there is one; otherwise the build
-fetches that commit into `.deps/`. LVGL adds about 1 MB of firmware, more than
+which collides with `gifio`'s. The build uses `LV_BINDINGS_DIR` if you set
+it, else a sibling `lvgl-bindings/` checkout, else fetches the commit in
+`LVGL_BINDINGS_COMMIT` into `.deps/`. A checkout you supply is built as it is:
+if its generated binding, `lvgl` or `lv_conf.h` differ from the pin, the build
+prints a note naming the commit and carries on. LVGL adds about 1 MB of firmware, more than
 most boards' default firmware region holds, and its qstrs need CircuitPython's
 four-byte qstr offsets (`MICROPY_QSTR_OFFSET_BYTES`, set by `micropython.mk`)
 where a port has them. The glue is [micropython.mk](micropython.mk).
@@ -204,7 +206,7 @@ To build this repo together with other CircuitPython extensions, see [Build with
 | `tests/test_lvgl_jpeg_decode.py` | CircuitPython-side test: `lv.image` on the jpegio corpus vs. jpegio's golden digests, plus CP's own `jpegio` -> `displayio.Bitmap` as a second witness (run with the built `circuitpython`; the witness skips the right-edge MCU block of odd widths, where CP's `bitmap_output()` mis-strides -- a CircuitPython bug, not the shim's) |
 | `tools/host_jpegio_decoder_check.sh` | Host proof of the decoder shim without a CircuitPython build: links LVGL + CP's `lib/tjpgd` + the shim, renders the corpus, compares digests |
 | `manifest.py` | Freezes `lib/fs_driver.py` (optional freeze helper) |
-| `LVGL_BINDINGS_COMMIT` | Exact generator/artifact source consumed by builds |
+| `LVGL_BINDINGS_COMMIT` | The lvgl-bindings commit a build fetches when you give it no checkout |
 | `docs/` | Integration notes |
 
 See `src/circuitpython_spike/` for the spike layout and `docs/build-and-flash.md` for build details.

@@ -27,14 +27,28 @@ ifeq ($(CIRCUITPY_GIFIO),1)
 $(error lvgl-circuitpython: add CIRCUITPY_GIFIO=0 to the make line. LVGL links its own AnimatedGIF decoder, which collides with gifio's)
 endif
 
-# lvgl-bindings: a sibling checkout wins; without one (a clone on its own),
-# the pinned commit is fetched into .deps/, only what this module compiles.
-LV_BINDINGS_DIR ?= $(abspath $(LVCP_DIR)/../lvgl-bindings)
+# Where lvgl-bindings comes from, first match wins:
+#   1. LV_BINDINGS_DIR, from make's command line or the environment;
+#   2. an lvgl-bindings checkout beside this one;
+#   3. the commit in LVGL_BINDINGS_COMMIT, fetched into .deps/ with only what
+#      this module compiles (a clone on its own).
+# The first two build the checkout as it is: if it isn't at the pinned commit,
+# the build says so and carries on. Only the fetched copy must match the pin.
+ifneq ($(strip $(LV_BINDINGS_DIR)),)
+LV_BINDINGS_DIR := $(abspath $(LV_BINDINGS_DIR))
+LVCP_BINDINGS_FROM := LV_BINDINGS_DIR
 ifeq ($(wildcard $(LV_BINDINGS_DIR)/lv_conf.h),)
+$(error lvgl-circuitpython: LV_BINDINGS_DIR=$(LV_BINDINGS_DIR) is not an lvgl-bindings checkout (no lv_conf.h))
+endif
+else ifneq ($(wildcard $(LVCP_DIR)/../lvgl-bindings/lv_conf.h),)
+LV_BINDINGS_DIR := $(abspath $(LVCP_DIR)/../lvgl-bindings)
+LVCP_BINDINGS_FROM := the lvgl-bindings beside lvgl-circuitpython
+else
 LV_BINDINGS_DIR := $(abspath $(LVCP_DIR)/.deps/lvgl-bindings)
+LVCP_BINDINGS_FROM := pin
 LVCP_FETCH := $(shell bash $(LVCP_DIR)/scripts/fetch_bindings.sh 1>&2; echo $$?)
 ifeq ($(wildcard $(LV_BINDINGS_DIR)/lv_conf.h),)
-$(error lvgl-circuitpython: fetching lvgl-bindings failed (scripts/fetch_bindings.sh exit $(LVCP_FETCH)); set LV_BINDINGS_DIR to a checkout of the commit in LVGL_BINDINGS_COMMIT)
+$(error lvgl-circuitpython: fetching lvgl-bindings failed (scripts/fetch_bindings.sh exit $(LVCP_FETCH)); set LV_BINDINGS_DIR to an lvgl-bindings checkout)
 endif
 endif
 
@@ -42,16 +56,22 @@ LVGL_DIR := $(LV_BINDINGS_DIR)/lvgl
 LVCP_C := $(LV_BINDINGS_DIR)/generated/lvgl_circuitpython.c
 LVCP_H := $(LV_BINDINGS_DIR)/generated/lvgl_circuitpython.h
 LV_BINDINGS_PIN := $(strip $(shell cat $(LVCP_DIR)/LVGL_BINDINGS_COMMIT 2>/dev/null))
-LV_BINDINGS_DIRTY := $(shell \
-	git -C $(LV_BINDINGS_DIR) cat-file -e $(LV_BINDINGS_PIN)^{commit} 2>/dev/null && \
-	git -C $(LV_BINDINGS_DIR) diff --quiet $(LV_BINDINGS_PIN) -- generated/lvgl_circuitpython.c generated/lvgl_circuitpython.h lvgl lv_conf.h && \
-	git -C $(LV_BINDINGS_DIR) diff --quiet -- generated/lvgl_circuitpython.c generated/lvgl_circuitpython.h lvgl lv_conf.h || echo 1)
-
 ifeq ($(LV_BINDINGS_PIN),)
 $(error Missing $(LVCP_DIR)/LVGL_BINDINGS_COMMIT)
 endif
-ifneq ($(LV_BINDINGS_DIRTY),)
-$(error $(LV_BINDINGS_DIR) does not match pinned binding inputs $(LV_BINDINGS_PIN); check out that commit or run scripts/sync_from_lvgl_bindings.sh with an exact ref)
+# 1 when the binding inputs are exactly the pinned commit's, with nothing
+# uncommitted on top.
+LV_BINDINGS_AT_PIN := $(shell \
+	git -C $(LV_BINDINGS_DIR) cat-file -e $(LV_BINDINGS_PIN)^{commit} 2>/dev/null && \
+	git -C $(LV_BINDINGS_DIR) diff --quiet $(LV_BINDINGS_PIN) -- generated/lvgl_circuitpython.c generated/lvgl_circuitpython.h lvgl lv_conf.h && \
+	git -C $(LV_BINDINGS_DIR) diff --quiet -- generated/lvgl_circuitpython.c generated/lvgl_circuitpython.h lvgl lv_conf.h && echo 1)
+ifeq ($(LV_BINDINGS_AT_PIN),)
+ifeq ($(LVCP_BINDINGS_FROM),pin)
+$(error $(LV_BINDINGS_DIR) does not match pinned binding inputs $(LV_BINDINGS_PIN); delete it and build again to refetch)
+endif
+LV_BINDINGS_HEAD := $(shell git -C $(LV_BINDINGS_DIR) describe --always --dirty --abbrev=12 2>/dev/null || echo "not a git checkout")
+$(info lvgl-circuitpython: note: building lvgl-bindings from $(LV_BINDINGS_DIR) ($(LVCP_BINDINGS_FROM)) at $(LV_BINDINGS_HEAD),)
+$(info whose generated binding, lvgl or lv_conf.h differ from LVGL_BINDINGS_COMMIT $(LV_BINDINGS_PIN). Building it as it is.)
 endif
 $(if $(wildcard $(LVCP_C)),,$(error $(LVCP_C) not found. Run $(LV_BINDINGS_DIR)/regenerate_all.sh --target circuitpython))
 $(if $(wildcard $(LVCP_H)),,$(error $(LVCP_H) not found. Run $(LV_BINDINGS_DIR)/regenerate_all.sh --target circuitpython))

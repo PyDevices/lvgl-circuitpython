@@ -6,7 +6,8 @@
 #   include $(LV_CP_MOD_DIR)/circuitpython.mk
 #
 # Requires:
-#   - exact pinned lvgl-bindings generated C and header artifacts
+#   - an lvgl-bindings checkout (LV_BINDINGS_DIR, or beside this repo); one
+#     at a commit other than LVGL_BINDINGS_COMMIT builds with a note
 #   - CIRCUITPY_LVGL=1 in port config (unix variant or board mpconfigboard.mk)
 
 LV_CP_MOD_DIR ?= $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
@@ -15,16 +16,21 @@ LVGL_DIR := $(LV_BINDINGS_DIR)/lvgl
 LVCP_C := $(LV_BINDINGS_DIR)/generated/lvgl_circuitpython.c
 LVCP_H := $(LV_BINDINGS_DIR)/generated/lvgl_circuitpython.h
 LV_BINDINGS_PIN := $(strip $(shell cat $(LV_CP_MOD_DIR)/LVGL_BINDINGS_COMMIT 2>/dev/null))
-LV_BINDINGS_DIRTY := $(shell \
-	git -C $(LV_BINDINGS_DIR) cat-file -e $(LV_BINDINGS_PIN)^{commit} 2>/dev/null && \
-	git -C $(LV_BINDINGS_DIR) diff --quiet $(LV_BINDINGS_PIN) -- generated/lvgl_circuitpython.c generated/lvgl_circuitpython.h lvgl lv_conf.h && \
-	git -C $(LV_BINDINGS_DIR) diff --quiet -- generated/lvgl_circuitpython.c generated/lvgl_circuitpython.h lvgl lv_conf.h || echo 1)
-
 ifeq ($(LV_BINDINGS_PIN),)
 $(error Missing $(LV_CP_MOD_DIR)/LVGL_BINDINGS_COMMIT)
 endif
-ifneq ($(LV_BINDINGS_DIRTY),)
-$(error $(LV_BINDINGS_DIR) does not match pinned binding inputs $(LV_BINDINGS_PIN); check out that commit/tag or run scripts/sync_from_lvgl_bindings.sh with an exact ref)
+ifeq ($(wildcard $(LV_BINDINGS_DIR)/lv_conf.h),)
+$(error lvgl-circuitpython: $(LV_BINDINGS_DIR) is not an lvgl-bindings checkout (no lv_conf.h); clone it beside this repo or set LV_BINDINGS_DIR)
+endif
+# The checkout is built as it is. When it isn't the pinned commit, say so.
+LV_BINDINGS_AT_PIN := $(shell \
+	git -C $(LV_BINDINGS_DIR) cat-file -e $(LV_BINDINGS_PIN)^{commit} 2>/dev/null && \
+	git -C $(LV_BINDINGS_DIR) diff --quiet $(LV_BINDINGS_PIN) -- generated/lvgl_circuitpython.c generated/lvgl_circuitpython.h lvgl lv_conf.h && \
+	git -C $(LV_BINDINGS_DIR) diff --quiet -- generated/lvgl_circuitpython.c generated/lvgl_circuitpython.h lvgl lv_conf.h && echo 1)
+ifeq ($(LV_BINDINGS_AT_PIN),)
+LV_BINDINGS_HEAD := $(shell git -C $(LV_BINDINGS_DIR) describe --always --dirty --abbrev=12 2>/dev/null || echo "not a git checkout")
+$(info lvgl-circuitpython: note: building lvgl-bindings from $(LV_BINDINGS_DIR) at $(LV_BINDINGS_HEAD),)
+$(info whose generated binding, lvgl or lv_conf.h differ from LVGL_BINDINGS_COMMIT $(LV_BINDINGS_PIN). Building it as it is.)
 endif
 
 LV_CP_LVGL_SOURCES := $(shell find $(LVGL_DIR)/src -type f -name '*.c')
