@@ -1,7 +1,7 @@
 # Newcomer's guide to lvgl-circuitpython
 
 `lvgl-circuitpython` integrates PyDevices' generated LVGL bindings into a
-CircuitPython firmware build. It supplies the out-of-tree patch and build glue,
+CircuitPython firmware build. It supplies the user C module glue,
 a GC-aware LVGL allocator, synced Python helpers, and a CircuitPython-specific
 JPEG decoder.
 
@@ -30,7 +30,7 @@ pydevices (as source) and the board config on the device.
 lvgl-bindings at the pinned generated revision
                   |
                   v
-lvgl-circuitpython patch + build glue
+lvgl-circuitpython user C module glue
                   |
                   +--> CircuitPython shared-bindings/shared-module/lvgl
                   +--> generated C source/header + allocator
@@ -49,20 +49,20 @@ copied forms here.
 ## Repository map
 
 The README's [Files](../README.md#files) table says what each path is for. The
-two you meet first are `apply_cp_patches.sh`, which patches a CircuitPython
-clone, and `circuitpython.mk`, the port Makefile fragment. The synced helper
+one you meet first is `micropython.mk`, the user C module glue CircuitPython's
+make reads. The synced helper
 is `lib/fs_driver.py`; `manifest.py` freezes it when the build names it in
 `FROZEN_MANIFEST`.
 
 ## Build boundary
 
-This repository patches a local, uncommitted CircuitPython tree because
-CircuitPython does not provide a separate out-of-tree C-module mechanism. The
-usual loop is:
+CircuitPython 11 builds user C modules the way MicroPython does, so this
+repository is handed to CircuitPython's own make as `USER_C_MODULES` and
+nothing in the CircuitPython tree is patched. The usual loop is:
 
 1. Regenerate the CircuitPython target in the pinned `lvgl-bindings` checkout when the binding shape changes.
-2. Preview or apply the patch, for example `./apply_cp_patches.sh --dry-run --port unix --variant coverage`.
-3. Build with CircuitPython's own `make`, passing `FROZEN_MANIFEST` if you want the helpers frozen.
+2. Build with CircuitPython's own `make` and `USER_C_MODULES=` pointing here, passing `FROZEN_MANIFEST` if you want the helpers frozen.
+3. Or build through micropython-pydevices' `build_mp.py --interpreter circuitpython`, which does the same and adds the other PyDevices modules.
 4. Run the pinned binding smoke script against the resulting interpreter.
 
 The root [README](../README.md) has the exact setup, toolchain, Unix and
@@ -82,8 +82,8 @@ with other extensions](../README.md#build-with-other-extensions).
 
 ## A safe first contribution
 
-Start with a focused change to the patch templates, allocator, or integration
-documentation. Run the patch script in `--dry-run` mode before applying it, keep
+Start with a focused change to the module sources, allocator, or integration
+documentation. Build the Unix port before and after, keep
 the bindings pin aligned, and use the repository's source assertions plus the
 matching `lvgl-bindings` smoke suite for the affected target.
 

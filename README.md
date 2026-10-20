@@ -1,6 +1,6 @@
 # lvgl-circuitpython
 
-CircuitPython integration for LVGL: tree patches, build glue, spike templates, and tests.
+CircuitPython integration for LVGL: build glue, module sources, and tests.
 
 New here? Read the [newcomer's guide](docs/newcomers.md) for the firmware
 entrypoint, generated-bindings boundary, and integration map.
@@ -34,8 +34,10 @@ most boards' default firmware region holds, and its qstrs need CircuitPython's
 four-byte qstr offsets (`MICROPY_QSTR_OFFSET_BYTES`, set by `micropython.mk`)
 where a port has them. The glue is [micropython.mk](micropython.mk).
 
-The patch-script route below (`apply_cp_patches.sh`, for CircuitPython 10.x)
-still works.
+To build with other PyDevices modules, or for a board, use
+[micropython-pydevices](https://github.com/PyDevices/micropython-pydevices)'
+`build_mp.py`: it hands this directory to CircuitPython's make for you, as
+[Build with other extensions](#build-with-other-extensions) shows.
 
 ## Workspace layout
 
@@ -48,13 +50,13 @@ workspace/
   circuitpython/
 ```
 
-For day-to-day work, this repo is the place to patch CircuitPython’s LVGL integration, not the place to author the generator itself. The common loop is to change the patch set or the spike templates under **`src/`**, apply patches with **`./apply_cp_patches.sh --apply`**, rebuild with plain `make`, and smoke-test with the shared LVGL smoke script. If the underlying binding shape changed, regenerate **`lvgl-bindings`** first so the generated `lvcp.c` and header files stay in sync.
+For day-to-day work, this repo is the place to change CircuitPython’s LVGL integration, not the place to author the generator itself. The common loop is to change the module sources under **`src/`**, rebuild with the `make` line above, and smoke-test with the shared LVGL smoke script. If the underlying binding shape changed, regenerate **`lvgl-bindings`** first so the generated `lvcp.c` and header files stay in sync.
 
 ## First-time setup
 
 ```bash
 # Pick a stable release tag from https://github.com/adafruit/circuitpython/releases
-git clone --branch 10.2.1 https://github.com/adafruit/circuitpython.git circuitpython
+git clone --branch 11.0.0-alpha.1 https://github.com/adafruit/circuitpython.git circuitpython
 cd circuitpython
 make fetch-all-submodules
 cd ..
@@ -109,49 +111,35 @@ export PATH="$(pwd)/.venv/bin:$PATH"
 
 ## Build with other extensions
 
-Several out-of-tree extensions build into one CircuitPython image the same
-way this one does: run each repository's `apply_cp_patches.sh` against the
-same checkout (audiodsp, displayif and pygraphics carry one of the same
-shape), then run CircuitPython's own make once.
-
-## Direct patch and build
-
-Adafruit’s [Extending CircuitPython](https://learn.adafruit.com/extending-circuitpython)
-guide (and the [design guide — native modules](https://docs.circuitpython.org/en/latest/docs/design_guide.html))
-describe adding `shared-bindings/` + `shared-module/` **inside** the CircuitPython
-tree. This repo keeps those sources out-of-tree under `src/circuitpython_spike/`
-and applies them with `./apply_cp_patches.sh` into a local (uncommitted)
-CircuitPython clone — Adafruit has no separate out-of-tree C-module path.
-See `src/circuitpython_spike/` for the spike layout.
-
-| Adafruit step | This repo |
-|---------------|-----------|
-| `shared-bindings/<mod>/` | `src/circuitpython_spike/shared-bindings/lvgl/` |
-| `shared-module/<mod>/` | `src/circuitpython_spike/shared-module/lvgl/` |
-| Enable `CIRCUITPY_*` | Patches set `CIRCUITPY_LVGL` (and `CIRCUITPY_GIFIO=0`) |
-| List sources in port Makefile | Board/variant `.mk` + `SRC_PATTERNS` + `circuitpython.mk` |
-| Build | `make` after `--apply` |
+Several PyDevices modules build into one CircuitPython image. From a
+[micropython-pydevices](https://github.com/PyDevices/micropython-pydevices)
+checkout, `build_mp.py` fetches CircuitPython, passes the modules you name to
+its make as `USER_C_MODULES`, and finds `lvgl-bindings` the way this repo does:
 
 ```bash
-cd lvgl-circuitpython
-./apply_cp_patches.sh --dry-run --port unix --variant coverage
-./apply_cp_patches.sh --apply --port unix --variant coverage
-./apply_cp_patches.sh --force-apply --port unix --variant coverage  # reinstall patches
-cd ../circuitpython/ports/unix
-make -j VARIANT=coverage
+./build_mp.py --interpreter circuitpython --port unix \
+    --modules /path/to/lvgl-circuitpython,pygraphics
 ```
 
-Espressif example:
+`--modules` takes short names for the modules that live in micropython-pydevices
+and a full path for one that doesn't, such as this repo. The binary lands in
+`builds/circuitpython/unix/coverage/`.
+
+For a board, name CircuitPython's port and board, and add
+`CIRCUITPY_GIFIO=0` at the end (the make line in
+[Build it as a user C module](#build-it-as-a-user-c-module) says why):
 
 ```bash
-cd lvgl-circuitpython
-./apply_cp_patches.sh --apply --port espressif --board adafruit_qualia_s3_rgb666
-cd ../circuitpython/ports/espressif
-. ./esp-idf/export.sh
-make -j BOARD=adafruit_qualia_s3_rgb666
+./build_mp.py --interpreter circuitpython --port espressif \
+    --board <board> --modules /path/to/lvgl-circuitpython CIRCUITPY_GIFIO=0
 ```
 
-Smoke test:
+LVGL makes the firmware about 1 MB bigger, so a board whose app partition is
+tight needs a bigger one. The Adafruit Qualia S3 RGB666 does: its [build and
+flash notes](docs/build-and-flash.md) have the full command, with the partition
+table, and take it on to a flashed board.
+
+Smoke test, with the interpreter you just built (`build-coverage/micropython` for the `make` line above):
 
 ```bash
 ./circuitpython/ports/unix/build-coverage/micropython ./lvgl-bindings/tools/test_lvgl_smoke.py
@@ -183,24 +171,12 @@ exists; put pydevices and the board config on the device.
 
 To build this repo together with other CircuitPython extensions, see [Build with other extensions](#build-with-other-extensions) above.
 
-## Environment variables
-
-| Variable | Default |
-|----------|---------|
-| `WORKSPACE_DIR` | Parent of this repo |
-| `CP_DIR` | Sibling `circuitpython/` (or set explicitly) |
-| `PORT` | (prompted or pass `--port`) |
-| `BOARD` | (prompted or pass `--board`) |
-| `VARIANT` | (prompted or pass `--variant`) |
-
-
 ## Files
 
 | Path | Role |
 |------|------|
-| `circuitpython.mk` | Port Makefile fragment (generated source/header + LVGL + allocator) |
-| `apply_cp_patches.sh` | Patch CP tree and copy spike templates (`--apply`, `--force-apply`, `--status`) |
-| `src/circuitpython_spike/` | Hand-written `shared-bindings/lvgl` module templates |
+| `micropython.mk` | User C module glue (generated source/header + LVGL + allocator) |
+| `src/circuitpython_spike/` | Hand-written `shared-bindings/lvgl` module sources |
 | `src/lv_mem_core_circuitpython.c` | GC-aware LVGL allocator |
 | `src/lv_jpegio_decoder_circuitpython.c` | LVGL JPEG decoder over CircuitPython's own `lib/tjpgd` (the one `jpegio` uses); registered from the spike after `lv_init()` |
 | `tests/test_lvgl_jpeg_decode.py` | CircuitPython-side test: `lv.image` on the jpegio corpus vs. jpegio's golden digests, plus CP's own `jpegio` -> `displayio.Bitmap` as a second witness (run with the built `circuitpython`; the witness skips the right-edge MCU block of odd widths, where CP's `bitmap_output()` mis-strides -- a CircuitPython bug, not the shim's) |

@@ -12,12 +12,11 @@
 # copy of the AnimatedGIF decoder (LV_USE_GIF in lvgl-bindings' lv_conf.h),
 # and CircuitPython's gifio links another, so the two collide at link time.
 # The unix port compiles no gifio and needs nothing.
-#
-# apply_cp_patches.sh and circuitpython.mk are the older route (they copy the
-# module into CircuitPython's tree and patch its makefiles); this file does
-# not use them.
 
 LVCP_DIR := $(USERMOD_DIR)
+# $(abspath) tidies ".." in the text without following symlinks, so look beside
+# the real directory.
+LVCP_REAL := $(realpath $(LVCP_DIR))
 
 ifeq ($(wildcard $(TOP)/py/circuitpy_mpconfig.h),)
 $(error lvgl-circuitpython is for CircuitPython builds; MicroPython builds use lvgl-micropython)
@@ -29,7 +28,9 @@ endif
 
 # Where lvgl-bindings comes from, first match wins:
 #   1. LV_BINDINGS_DIR, from make's command line or the environment;
-#   2. an lvgl-bindings checkout beside this one;
+#   2. an lvgl-bindings checkout beside this one (beside the directory this
+#      one really is: a build that hands the module over through a symlink
+#      still finds it);
 #   3. the commit in LVGL_BINDINGS_COMMIT, fetched into .deps/ with only what
 #      this module compiles (a clone on its own).
 # The first two build the checkout as it is: if it isn't at the pinned commit,
@@ -40,8 +41,8 @@ LVCP_BINDINGS_FROM := LV_BINDINGS_DIR
 ifeq ($(wildcard $(LV_BINDINGS_DIR)/lv_conf.h),)
 $(error lvgl-circuitpython: LV_BINDINGS_DIR=$(LV_BINDINGS_DIR) is not an lvgl-bindings checkout (no lv_conf.h))
 endif
-else ifneq ($(wildcard $(LVCP_DIR)/../lvgl-bindings/lv_conf.h),)
-LV_BINDINGS_DIR := $(abspath $(LVCP_DIR)/../lvgl-bindings)
+else ifneq ($(wildcard $(LVCP_REAL)/../lvgl-bindings/lv_conf.h),)
+LV_BINDINGS_DIR := $(abspath $(LVCP_REAL)/../lvgl-bindings)
 LVCP_BINDINGS_FROM := the lvgl-bindings beside lvgl-circuitpython
 else
 LV_BINDINGS_DIR := $(abspath $(LVCP_DIR)/.deps/lvgl-bindings)
