@@ -11,7 +11,7 @@ def test_bindings_pin_is_an_exact_commit():
 
 
 def test_generated_source_and_header_are_both_required():
-    make = (ROOT / "circuitpython.mk").read_text()
+    make = (ROOT / "micropython.mk").read_text()
     assert "generated/lvgl_circuitpython.c" in make
     assert "generated/lvgl_circuitpython.h" in make
     assert "LVGL_BINDINGS_COMMIT" in make
@@ -37,14 +37,16 @@ def test_no_consumer_smoke_wrapper_remains():
     assert not (ROOT / "tools" / "test_lvgl_cp_unix.py").exists()
 
 
-def test_patch_script_reports_success_without_legacy_regeneration_wrappers():
-    script = (ROOT / "apply_cp_patches.sh").read_text()
-    assert script.rstrip().endswith("exit 0")
-    assert "regenerate_lvcp.sh" not in script
+def test_the_patch_route_is_retired():
+    # CircuitPython 11 takes this directory as USER_C_MODULES: no script
+    # patches its tree and no second makefile fragment competes with
+    # micropython.mk.
+    assert not (ROOT / "apply_cp_patches.sh").exists()
+    assert not (ROOT / "circuitpython.mk").exists()
 
 
 def test_jpegio_decoder_shim_is_wired():
-    make = (ROOT / "circuitpython.mk").read_text()
+    make = (ROOT / "micropython.mk").read_text()
     shim = ROOT / "src/lv_jpegio_decoder_circuitpython.c"
     spike = (ROOT / "src/circuitpython_spike/shared-module/lvgl/__init__.c").read_text()
     assert shim.is_file()
@@ -97,13 +99,19 @@ def test_an_lvgl_failure_never_spins_a_board_off_usb():
     handler = (ROOT / "src/lv_assert_circuitpython.c").read_text()
     assert "reset_into_safe_mode(SAFE_MODE_SDK_FATAL_ERROR)" in handler
     assert "src/lv_assert_circuitpython.c" in (ROOT / "micropython.mk").read_text()
-    assert "src/lv_assert_circuitpython.c" in (ROOT / "circuitpython.mk").read_text()
 
 
 def test_a_supplied_checkout_builds_as_it_is():
     # Only the copy fetched at the pin must match it; LV_BINDINGS_DIR or a
     # sibling checkout that has moved on gets a note, not an error.
-    for name in ("micropython.mk", "circuitpython.mk"):
-        text = (ROOT / name).read_text()
-        assert "Building it as it is" in text
-        assert "does not match pinned binding inputs" not in text or name == "micropython.mk"
+    text = (ROOT / "micropython.mk").read_text()
+    assert "Building it as it is" in text
+
+
+def test_the_sibling_lookup_follows_a_symlinked_module_path():
+    # build_mp.py hands modules to make through links in its build directory,
+    # where $(abspath) would look beside the link, not beside this repo.
+    make = (ROOT / "micropython.mk").read_text()
+    assert "LVCP_REAL := $(realpath $(LVCP_DIR))" in make
+    assert "$(LVCP_REAL)/../lvgl-bindings" in make
+    assert "$(LVCP_DIR)/../lvgl-bindings" not in make

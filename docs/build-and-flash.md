@@ -1,27 +1,39 @@
 # CircuitPython + LVGL: build and flash notes
 
-Lessons from building and flashing **Adafruit Qualia S3 RGB666** (`adafruit_qualia_s3_rgb666`) with full LVGL (2026-07-20). Sibling-clone workflow: this repo next to `circuitpython/` and `lvgl-bindings/`.
+Lessons from building and flashing **Adafruit Qualia S3 RGB666** (`adafruit_qualia_s3_rgb666`) with full LVGL (2026-07-20; the build recipe redone for CircuitPython 11, 2026-10-19).
+
+## Build
+
+[micropython-pydevices](https://github.com/PyDevices/micropython-pydevices)'
+`build_mp.py` fetches CircuitPython, hands this repo to its make as a user C
+module, and runs the build. Two things go on the end of the command for this
+board. `CIRCUITPY_GIFIO=0` stops CircuitPython's AnimatedGIF decoder colliding
+with LVGL's. A partition table with a 4 MB app slot goes in through
+`FLASH_SIZE_SDKCONFIG`, because the stock 16 MB table gives the app 2 MB and the
+LVGL firmware is about 2.9 MB.
+
+```bash
+# from a micropython-pydevices checkout, with lvgl-circuitpython beside it
+LVCP="$(realpath ../lvgl-circuitpython)"
+printf 'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="%s"\nCONFIG_PARTITION_TABLE_FILENAME="%s"\n' \
+    "$LVCP/scripts/partitions-16MB-lvgl.csv" "$LVCP/scripts/partitions-16MB-lvgl.csv" \
+    > /tmp/qualia-lvgl-partitions.defaults
+./build_mp.py --interpreter circuitpython --port espressif \
+    --board adafruit_qualia_s3_rgb666 --modules "$LVCP" CIRCUITPY_GIFIO=0 \
+    "FLASH_SIZE_SDKCONFIG=esp-idf-config/sdkconfig-flash-16MB.defaults;/tmp/qualia-lvgl-partitions.defaults"
+```
+
+The output is in `builds/circuitpython/espressif/adafruit_qualia_s3_rgb666/`
+(see [Build artifacts](#build-artifacts)). A board whose app slot already holds 3 MB or more needs only
+`CIRCUITPY_GIFIO=0`.
 
 ## Tooling locations
 
 | Item | Path |
 |------|------|
-| LVGL patches | `./apply_cp_patches.sh` (this repo) |
-| Make glue | `./circuitpython.mk` |
+| Make glue | `./micropython.mk` |
 | 16MB LVGL partitions | `./scripts/partitions-16MB-lvgl.csv` |
-| CircuitPython tree | sibling `circuitpython/` (upstream clone — do not commit) |
-| CP build venv | local `.venv` with `circuitpython/requirements-dev.txt` |
-
-```bash
-# Patch + make (from this repo)
-./apply_cp_patches.sh --apply --port espressif --board adafruit_qualia_s3_rgb666
-cd ../circuitpython/ports/espressif
-. ./esp-idf/export.sh
-# Prefer PYTHON from a venv that has circuitpython/requirements-dev.txt
-make -j BOARD=adafruit_qualia_s3_rgb666
-```
-
-See the [org's optional aggregator workspace](https://github.com/PyDevices/cmods) for an easier way to build this repo with other CircuitPython extensions.
+| CircuitPython tree | micropython-pydevices' `deps/circuitpython`, fetched by `build_mp.py` |
 
 ## Board detection pitfalls
 
@@ -33,59 +45,39 @@ See the [org's optional aggregator workspace](https://github.com/PyDevices/cmods
 
 ### 1. `ARG_MAX` / “Argument list too long” on qstr
 
-LVGL adds hundreds of `.c` files to `SRC_C`. Espressif’s huge `QSTR_GEN_CFLAGS` + `SRC_QSTR += $(SRC_C)` exceeds Linux `ARG_MAX` during qstr preprocess.
+LVGL adds hundreds of `.c` files. Handed to the qstr scan, they push Espressif’s huge `QSTR_GEN_CFLAGS` past Linux `ARG_MAX`.
 
-**Fix:** Keep LVGL sources in `SRC_C` for the link, but **exclude them from `SRC_QSTR`** (they have no `MP_QSTR_*`). `apply_cp_patches.sh` rewrites the port Makefile:
+**Handled:** `micropython.mk` links LVGL through `SRC_USERMOD_LIB_C`, which the qstr scan never sees (LVGL has no `MP_QSTR_*`).
 
-```make
-SRC_QSTR += $(filter-out $(LV_CP_LVGL_SOURCES),$(SRC_C))
-```
+### 2. `-Werror=suggest-attribute=format` on LVGL
 
-Documented in `circuitpython.mk`.
+**Handled:** `micropython.mk` puts `-Wno-suggest-attribute=format` on the LVGL objects only.
 
-### 2. Python env after IDF `export.sh`
+### 3. Duplicate `gif.c` (AnimatedGIF vs LVGL)
 
-IDF export owns `python3` (needed for `idf_component_manager`). CircuitPython recipes need `minify_html` etc. from the CP venv.
+`lvgl-bindings/lv_conf.h` sets `LV_USE_GIF 1`, so LVGL’s `libs/gif/gif.c` is compiled. CircuitPython’s `CIRCUITPY_GIFIO` (on by default with displayio) vendors a colliding AnimatedGIF `gif.c`. The bindings generator needs no change; it is a CircuitPython build conflict.
 
-**Fix:** After IDF export, set `PYTHON` to a venv that has CircuitPython `requirements-dev.txt` installed (for example `lvgl-circuitpython/.venv/bin/python`). Do **not** put the venv’s `python3` first on `PATH` before IDF export — that breaks component manager.
-
-### 3. `-Werror=suggest-attribute=format` on LVGL
-
-**Fix:** `-Wno-suggest-attribute=format` in `LVGL_SUPPRESS_CFLAGS` inside `circuitpython.mk`.
-
-### 4. Duplicate `gif.c` (AnimatedGIF vs LVGL)
-
-`lvgl-bindings/lv_conf.h` sets `LV_USE_GIF 1`, so LVGL’s `libs/gif/gif.c` is compiled. CircuitPython’s `CIRCUITPY_GIFIO` (defaults with displayio) vendors a colliding AnimatedGIF `gif.c`. The **bindings generator does not need changes** for this — it is a CircuitPython build conflict.
-
-**Fix:** `apply_cp_patches.sh` forces `CIRCUITPY_GIFIO = 0` whenever `CIRCUITPY_LVGL=1` (shared `circuitpy_mpconfig.mk` and per-board enable block). After flipping GIFIO off on an existing build dir, delete stale genhdr:
+**Fix:** put `CIRCUITPY_GIFIO=0` on the make line (`micropython.mk` stops the build with that message if you forget). On an existing build directory that had gifio on, delete the stale generated headers:
 
 ```bash
 rm -f build-<board>/genhdr/module/*gifio* build-<board>/genhdr/qstr/*gifio*
 ```
 
-### 5. App partition too small (“Too little flash”)
+### 4. App partition too small (“Too little flash”)
 
-Full LVGL app is ~**2.6–2.7 MB**. Stock `esp-idf-config/partitions-16MB.csv` has `ota_0 = 2048K`.
+Full LVGL app is ~**2.9 MB**. Stock `esp-idf-config/partitions-16MB.csv` has `ota_0 = 2048K`, and a build without the fix below ends in `Too little flash!!!`.
 
-**Fix:** `partitions-16MB-lvgl.csv` with `ota_0 = 4096K` (moves `uf2` to `0x610000`, shrinks `user_fs`). `apply_cp_patches.sh` copies it to `ports/espressif/esp-idf-config/` and points the board `sdkconfig` at it for 16MB boards.
-
-**Critical:** The CSV path in `sdkconfig` must be under `esp-idf-config/`. Paths outside the port tree are ignored by IDF confgen, and the build silently keeps the stock 2MB table. After changing partitions, wipe the board’s esp-idf build config if needed:
+**Fix:** `scripts/partitions-16MB-lvgl.csv` has `ota_0 = 4096K` (it moves `uf2` to `0x610000` and shrinks `user_fs`). The build command above points the IDF at it with an absolute path in a second sdkconfig defaults file. A relative path outside the port tree is ignored by IDF confgen, and the build silently keeps the stock 2 MB table, so check the built config:
 
 ```bash
-rm -rf circuitpython/ports/espressif/build-<board>/esp-idf
+grep PARTITION_TABLE_FILENAME builds/circuitpython/espressif/adafruit_qualia_s3_rgb666/esp-idf/sdkconfig
 ```
 
-Verify in the built sdkconfig:
-
-```text
-CONFIG_PARTITION_TABLE_FILENAME="esp-idf-config/partitions-16MB-lvgl.csv"
-```
-
-Successful link reports ~`2704160 bytes used` against a **4096K** firmware region.
+It should name `partitions-16MB-lvgl.csv`. A good link reports `2929872 bytes used` against a **4096K** firmware region.
 
 ### Build artifacts
 
-Under `circuitpython/ports/espressif/build-adafruit_qualia_s3_rgb666/`:
+Under `builds/circuitpython/espressif/adafruit_qualia_s3_rgb666/` in micropython-pydevices:
 
 | File | Role |
 |------|------|
@@ -142,7 +134,7 @@ Expect `303A:1001` (often a **new** COM number, e.g. COM7 instead of COM8).
 
 CircuitPython’s joined `firmware.bin` replaces the second-stage path with the **IDF bootloader**. Adafruit’s documented flow uses **TinyUF2** (`combined.bin` from [tinyuf2 releases](https://github.com/adafruit/tinyuf2/releases) for `adafruit_qualia_s3_rgb666`).
 
-Stock TinyUF2 layout (`ota_0 = 2048K`) **cannot** hold a ~2.6MB LVGL app. LVGL needs the 4MB table (above), which moves the `uf2` factory partition to `0x610000`.
+Stock TinyUF2 layout (`ota_0 = 2048K`) **cannot** hold a ~2.9MB LVGL app. LVGL needs the 4MB table (above), which moves the `uf2` factory partition to `0x610000`.
 
 ## Recommended flash recipe (Qualia + LVGL)
 
@@ -150,14 +142,7 @@ Proven end-to-end sequence:
 
 ### A. Build
 
-```bash
-./apply_cp_patches.sh --apply --port espressif --board adafruit_qualia_s3_rgb666
-cd ../circuitpython/ports/espressif
-. ./esp-idf/export.sh
-make -j BOARD=adafruit_qualia_s3_rgb666
-```
-
-Confirm `build-adafruit_qualia_s3_rgb666/circuitpython-firmware.bin` ≈ 2.6MB and partition filename is `partitions-16MB-lvgl.csv`.
+The command under [Build](#build). Confirm `circuitpython-firmware.bin` in the output directory is ≈ 2.9MB and the built sdkconfig names `partitions-16MB-lvgl.csv`.
 
 ### B. Install Adafruit TinyUF2 + 4MB partitions + app (ROM mode)
 
@@ -212,10 +197,9 @@ Adafruit CircuitPython 10.2.1-dirty ... Adafruit-Qualia-S3-RGB666
 
 | Symptom | Likely cause | Action |
 |---------|--------------|--------|
-| `Argument list too long` / qstr | LVGL in `SRC_QSTR` | Ensure `filter-out $(LV_CP_LVGL_SOURCES)` patch |
-| `minify_html` missing | Wrong Python after IDF export | `PYTHON=…/lvgl-circuitpython/.venv/bin/python` |
-| Duplicate `GIF_*` at link | GIFIO + LVGL gif | `CIRCUITPY_GIFIO = 0`; clean gifio genhdr |
-| `Too little flash` / 2MB region | Stock partition CSV still selected | CSV under `esp-idf-config/`; wipe `build-*/esp-idf` |
+| `Argument list too long` / qstr | LVGL in the qstr scan | Use `micropython.mk` as it is (LVGL goes in `SRC_USERMOD_LIB_C`) |
+| Duplicate `GIF_*` at link | GIFIO + LVGL gif | `CIRCUITPY_GIFIO=0`; clean gifio genhdr |
+| `Too little flash` / 2MB region | Stock partition CSV still selected | Add the `FLASH_SIZE_SDKCONFIG=` argument from [Build](#build) |
 | `0x08` / can’t sync esptool | App owns USB | Boot0+Reset → ROM (`303A:1001`) |
 | COM “not functioning” | After `machine.bootloader()` | Unplug/replug |
 | Stuck `303A:1001` after flash | RTS “reset” ineffective | Physical Reset |
@@ -225,5 +209,5 @@ Adafruit CircuitPython 10.2.1-dirty ... Adafruit-Qualia-S3-RGB666
 
 ## Upstream / commit policy
 
-- Do **not** commit changes inside `circuitpython/` (or `micropython/`) unless explicitly overridden.
-- Durable fixes belong in `lvgl-circuitpython/` (`apply_cp_patches.sh`, `circuitpython.mk`, `scripts/partitions-16MB-lvgl.csv`).
+- Do **not** commit changes inside `deps/circuitpython/` (or `micropython/`) unless explicitly overridden.
+- Durable fixes belong in `lvgl-circuitpython/` (`micropython.mk`, `scripts/partitions-16MB-lvgl.csv`).
