@@ -6,7 +6,7 @@ Change generator-owned code and the synced Python helper in
 [lvgl-bindings](https://github.com/PyDevices/lvgl-bindings), then regenerate and
 sync; don't edit their copied forms here. Change this repository for the module
 sources, the allocator, the JPEG decoder or the integration. How to use the
-module is in the [docs site](https://lvgl.readthedocs.io), built from
+module is in the [docs site](https://github.com/PyDevices/lvgl-bindings/blob/main/docs/index.md), built from
 lvgl-bindings.
 
 A good first change is a focused fix to the module sources, the allocator or the
@@ -44,7 +44,7 @@ checkouts/
 
 The usual loop: change the module sources under `src/`, rebuild with the
 `make` line in
-[Build CircuitPython firmware with LVGL](https://lvgl.readthedocs.io/en/latest/guides/build-circuitpython-firmware-with-lvgl.html),
+[Build CircuitPython firmware with LVGL](https://github.com/PyDevices/lvgl-bindings/blob/main/docs/guides/build-circuitpython-firmware-with-lvgl.md),
 and run the smoke test. If the binding's shape changed, regenerate in
 lvgl-bindings first so the generated source and header stay in step:
 
