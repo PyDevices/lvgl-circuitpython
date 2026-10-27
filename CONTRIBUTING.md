@@ -19,16 +19,16 @@ lvgl-bindings smoke suite for the target.
 | Path | What it is |
 |------|------------|
 | `micropython.mk` | User C module glue: generated source and header, LVGL and the allocator |
-| `src/circuitpython_spike/` | Hand-written `shared-bindings/lvgl` and `shared-module/lvgl` module sources |
-| `src/lv_mem_core_circuitpython.c` | The GC-aware LVGL allocator |
-| `src/lv_assert_circuitpython.c` | LVGL's assert hook for CircuitPython |
-| `src/lv_jpegio_decoder_circuitpython.c` | LVGL's JPEG decoder over CircuitPython's own `lib/tjpgd` (the one `jpegio` uses), registered after `lv_init()` |
-| `lib/fs_driver.py` | LVGL filesystem driver, synced from lvgl-bindings |
+| [`src/circuitpython_spike/`](src/circuitpython_spike/) | Hand-written `shared-bindings/lvgl` and `shared-module/lvgl` module sources |
+| [`src/lv_mem_core_circuitpython.c`](src/lv_mem_core_circuitpython.c) | The GC-aware LVGL allocator |
+| [`src/lv_assert_circuitpython.c`](src/lv_assert_circuitpython.c) | LVGL's assert hook for CircuitPython |
+| [`src/lv_jpegio_decoder_circuitpython.c`](src/lv_jpegio_decoder_circuitpython.c) | LVGL's JPEG decoder over CircuitPython's own `lib/tjpgd` (the one `jpegio` uses), registered after `lv_init()` |
+| [`lib/fs_driver.py`](lib/fs_driver.py) | LVGL filesystem driver, synced from lvgl-bindings |
 | `manifest.py` | Freezes `lib/fs_driver.py` when the build names it in `FROZEN_MANIFEST` |
-| `scripts/partitions-16MB-lvgl.csv` | A 16 MB partition table with a 4 MB app slot |
-| `scripts/fetch_bindings.sh`, `scripts/sync_from_lvgl_bindings.sh` | Fetch the pinned bindings into `.deps/`; refresh the helpers from an exact commit |
+| [`scripts/partitions-16MB-lvgl.csv`](scripts/partitions-16MB-lvgl.csv) | A 16 MB partition table with a 4 MB app slot |
+| [`scripts/fetch_bindings.sh`](scripts/fetch_bindings.sh), [`scripts/sync_from_lvgl_bindings.sh`](scripts/sync_from_lvgl_bindings.sh) | Fetch the pinned bindings into `.deps/`; refresh the helpers from an exact commit |
 | `tests/` | Integration assertions, and the JPEG decode test |
-| `tools/host_jpegio_decoder_check.sh` | Host proof of the decoder shim without a CircuitPython build |
+| [`tools/host_jpegio_decoder_check.sh`](tools/host_jpegio_decoder_check.sh) | Host proof of the decoder shim without a CircuitPython build |
 | `LVGL_BINDINGS_COMMIT` | The lvgl-bindings commit a build fetches when you give it no checkout |
 
 ## Work against a checkout
@@ -77,10 +77,10 @@ doesn't duplicate or forward it. Run it with the interpreter you built:
 ./circuitpython/ports/unix/build-coverage/micropython ./lvgl-bindings/tools/test_lvgl_smoke.py
 ```
 
-`tests/test_integration.py` reads the build files and sources and checks that
+[`tests/test_integration.py`](tests/test_integration.py) reads the build files and sources and checks that
 they are wired together.
 
-`tests/test_lvgl_jpeg_decode.py` is the CircuitPython-side decoder test. It
+[`tests/test_lvgl_jpeg_decode.py`](tests/test_lvgl_jpeg_decode.py) is the CircuitPython-side decoder test. It
 renders `lv.image` on the jpegio corpus and compares the result to jpegio's
 golden digests, and uses CircuitPython's own `jpegio` to `displayio.Bitmap` as
 a second witness. The witness skips the right-edge MCU block of odd widths,
