@@ -1,216 +1,48 @@
+![A blue button reading Hello from LVGL on a light gray background](docs/images/hello.png)
+
 # lvgl-circuitpython
 
-CircuitPython integration for LVGL: build glue, module sources, and tests.
+lvgl-circuitpython is the part of OmniPython that builds LVGL into CircuitPython-compatible firmware as a user C module, so `import lvgl as lv` works on CircuitPython 11.
 
-New here? Read the [newcomer's guide](docs/newcomers.md) for the firmware
-entrypoint, generated-bindings boundary, and integration map.
-
-This repo is a consumer/build repo for the LVGL stack: it consumes generated bindings from lvgl-bindings and rebuilds CircuitPython targets, but does not publish its own package. See [lvgl-bindings — The LVGL family](https://github.com/PyDevices/lvgl-bindings#the-lvgl-family) for how the family fits together.
-
-Builds against [lvgl-bindings](https://github.com/PyDevices/lvgl-bindings) and [circuitpython](https://github.com/adafruit/circuitpython). The bindings come from `LV_BINDINGS_DIR` if you set it, else an `lvgl-bindings` checkout beside this repo, else the commit in `LVGL_BINDINGS_COMMIT`, which the user C module build fetches. A checkout you supply is built as it is, with a note when it isn't the pinned commit.
-
-**Synced from lvgl-bindings:** `lib/fs_driver.py` is synced from [lvgl-bindings](https://github.com/PyDevices/lvgl-bindings) at the commit pinned in `LVGL_BINDINGS_COMMIT`, along with the generated bindings. Do not edit it here — change it in lvgl-bindings and re-sync.
-
-**`display_driver` is not here.** LVGL's PyDevices coordinator lives in [pydevices `lib/`](https://github.com/PyDevices/pydevices/blob/main/lib/display_driver.py) and comes with `pydevices`, beside the `appdev`, `events`, `keys` and `multimer` it needs. On CircuitPython, install pydevices as source (`--no-mpy`) onto `CIRCUITPY`.
-
-## Build it as a user C module
-
-CircuitPython 11 builds user C modules the way MicroPython does, so you can
-hand this directory to any port's `make` without patching CircuitPython:
+CircuitPython 11 builds user C modules the way MicroPython does, so you hand this directory to a port's `make`; nothing in the CircuitPython tree changes:
 
 ```bash
+git clone https://github.com/PyDevices/lvgl-circuitpython
 make -C circuitpython/ports/unix USER_C_MODULES=/path/to/lvgl-circuitpython
-make -C circuitpython/ports/raspberrypi BOARD=<board> CIRCUITPY_GIFIO=0 \
-    USER_C_MODULES=/path/to/lvgl-circuitpython
 ```
 
-`CIRCUITPY_GIFIO=0` is for boards: LVGL links its own AnimatedGIF decoder,
-which collides with `gifio`'s. The build uses `LV_BINDINGS_DIR` if you set
-it, else a sibling `lvgl-bindings/` checkout, else fetches the commit in
-`LVGL_BINDINGS_COMMIT` into `.deps/`. A checkout you supply is built as it is:
-if its generated binding, `lvgl` or `lv_conf.h` differ from the pin, the build
-prints a note naming the commit and carries on. LVGL adds about 1 MB of firmware, more than
-most boards' default firmware region holds, and its qstrs need CircuitPython's
-four-byte qstr offsets (`MICROPY_QSTR_OFFSET_BYTES`, set by `micropython.mk`)
-where a port has them. The glue is [micropython.mk](micropython.mk).
-
-To build with other PyDevices modules, or for a board, use
-[micropython-pydevices](https://github.com/PyDevices/micropython-pydevices)'
-`build_mp.py`: it hands this directory to CircuitPython's make for you, as
-[Build with other extensions](#build-with-other-extensions) shows.
-
-## Workspace layout
-
-Place this repo as a sibling of `lvgl-bindings/` and `circuitpython/`:
-
-```
-workspace/
-  lvgl-circuitpython/     ← this repo
-  lvgl-bindings/
-  circuitpython/
-```
-
-For day-to-day work, this repo is the place to change CircuitPython’s LVGL integration, not the place to author the generator itself. The common loop is to change the module sources under **`src/`**, rebuild with the `make` line above, and smoke-test with the shared LVGL smoke script. If the underlying binding shape changed, regenerate **`lvgl-bindings`** first so the generated `lvcp.c` and header files stay in sync.
-
-## First-time setup
-
-```bash
-# Pick a stable release tag from https://github.com/adafruit/circuitpython/releases
-git clone --branch 11.0.0-alpha.1 https://github.com/adafruit/circuitpython.git circuitpython
-cd circuitpython
-make fetch-all-submodules
-cd ..
-
-git clone https://github.com/PyDevices/lvgl-bindings.git lvgl-bindings
-cd lvgl-bindings
-git submodule update --init lvgl
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-./regenerate_all.sh --target circuitpython
-cd ..
-```
-
-## Build environment
-
-Install system build tools and cross-compilers **before** building CircuitPython. Follow CircuitPython’s own documentation — this repo does not install compilers or apt packages for you.
-
-- [circuitpython/building.md](https://github.com/adafruit/circuitpython/blob/main/building.md) in your clone
-- Adafruit Learn: [Building CircuitPython on Linux](https://learn.adafruit.com/building-circuitpython/linux) (or macOS / WSL as appropriate)
-
-Typical Linux setup includes packages such as `build-essential`, `cmake`, `python3`, and port-specific tools (for example `gcc-arm-none-eabi` and related newlib packages for `raspberrypi`). Exact packages depend on the port you build.
-
-Current stable CircuitPython releases require **GCC 14** or newer when compiling firmware. Check the compiler your port uses (for embedded boards, usually `arm-none-eabi-gcc --version`). Ubuntu’s `gcc-arm-none-eabi` package is often GCC 13 — too old for current CircuitPython.
-
-Install a **system-wide** Arm GNU Toolchain 14+ (not under your home directory or this repo). Example on Linux:
-
-```bash
-# Download (or use an existing .tar.xz)
-curl -fLO https://developer.arm.com/-/media/Files/downloads/gnu/14.2.rel1/binrel/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi.tar.xz
-
-# Install under /opt and expose to all users
-sudo tar -xJf arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi.tar.xz -C /opt
-printf '%s\n' 'export PATH="/opt/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi/bin:$PATH"' \
-  | sudo tee /etc/profile.d/arm-gnu-toolchain.sh
-sudo chmod 644 /etc/profile.d/arm-gnu-toolchain.sh
-
-# Activate in the current shell, then verify
-source /etc/profile.d/arm-gnu-toolchain.sh
-arm-none-eabi-gcc --version   # should report GCC 14.x
-which arm-none-eabi-gcc       # should be under /opt/..., not /usr/bin
-```
-
-Open a new terminal (or `source /etc/profile.d/arm-gnu-toolchain.sh`) before building.
-
-Create a Python venv for CircuitPython’s `requirements-dev.txt` (needed for `minify_html` and related tools). If `minify_html` fails to install, you may need Rust (see CircuitPython `building.md`).
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install -r ../circuitpython/requirements-dev.txt
-export PATH="$(pwd)/.venv/bin:$PATH"
-```
-
-## Build with other extensions
-
-Several PyDevices modules build into one CircuitPython image. From a
-[micropython-pydevices](https://github.com/PyDevices/micropython-pydevices)
-checkout, `build_mp.py` fetches CircuitPython, passes the modules you name to
-its make as `USER_C_MODULES`, and finds `lvgl-bindings` the way this repo does:
-
-```bash
-./build_mp.py --interpreter circuitpython --port unix \
-    --modules /path/to/lvgl-circuitpython,pygraphics
-```
-
-`--modules` takes short names for the modules that live in micropython-pydevices
-and a full path for one that doesn't, such as this repo. The binary lands in
-`builds/circuitpython/unix/coverage/`.
-
-For a board, name CircuitPython's port and board, and add
-`CIRCUITPY_GIFIO=0` at the end (the make line in
-[Build it as a user C module](#build-it-as-a-user-c-module) says why):
-
-```bash
-./build_mp.py --interpreter circuitpython --port espressif \
-    --board <board> --modules /path/to/lvgl-circuitpython CIRCUITPY_GIFIO=0
-```
-
-LVGL makes the firmware about 1 MB bigger, so a board whose app partition is
-tight needs a bigger one. The Adafruit Qualia S3 RGB666 does: its [build and
-flash notes](docs/build-and-flash.md) have the full command, with the partition
-table, and take it on to a flashed board.
-
-Smoke test, with the interpreter you just built (`build-coverage/micropython` for the `make` line above):
-
-```bash
-./circuitpython/ports/unix/build-coverage/micropython ./lvgl-bindings/tools/test_lvgl_smoke.py
-```
-
-The smoke suite comes directly from the exact pinned bindings source; this repo does not duplicate or forward it.
-
-## App Usage & Timer Model
-
-CircuitPython does not provide `machine.Timer` or signal FFI. In CircuitPython, `display_driver` and `multimer` operate via cooperative `asyncio` or pumped timers:
-- Applications run `app.run()` or an `asyncio` loop to continuously pump LVGL tasks and events.
+On a board, add `CIRCUITPY_GIFIO=0` to the same line. The build fetches the matching LVGL bindings itself; you need only `git`.
 
 ```python
-import display_driver  # noqa: F401 - initializes display and input
 import lvgl as lv
-from display_driver import app
 
-scr = lv.screen_active()
-label = lv.label(scr)
-label.set_text("Hello CircuitPython LVGL!")
-label.center()
+lv.init()
+disp = lv.display_create(240, 120)
+disp.set_color_format(lv.COLOR_FORMAT.RGB565)
+buf = bytearray(240 * 120 * 2)
+disp.set_buffers(buf, None, len(buf), lv.DISPLAY_RENDER_MODE.FULL)
+flushed = []
+disp.set_flush_cb(lambda d, area, px: (flushed.append(area.get_width()), d.flush_ready()))
 
-app.run()
+button = lv.button(lv.screen_active())
+button.center()
+label = lv.label(button)
+label.set_text("Hello from LVGL")
+button.add_event_cb(lambda e: print("clicked"), lv.EVENT.CLICKED, None)
+button.send_event(lv.EVENT.CLICKED, None)
+
+lv.tick_inc(50)
+lv.refr_now(disp)
+print(label.get_text(), "- drew", flushed[-1], "px wide")
 ```
 
-`display_driver` comes with pydevices, beside the `appdev`, `events`, `keys` and
-`multimer` it imports, and wants a `board_config` unless an `appdev.App` already
-exists; put pydevices and the board config on the device.
-
-To build this repo together with other CircuitPython extensions, see [Build with other extensions](#build-with-other-extensions) above.
-
-## Files
-
-| Path | Role |
-|------|------|
-| `micropython.mk` | User C module glue (generated source/header + LVGL + allocator) |
-| `src/circuitpython_spike/` | Hand-written `shared-bindings/lvgl` module sources |
-| `src/lv_mem_core_circuitpython.c` | GC-aware LVGL allocator |
-| `src/lv_jpegio_decoder_circuitpython.c` | LVGL JPEG decoder over CircuitPython's own `lib/tjpgd` (the one `jpegio` uses); registered from the spike after `lv_init()` |
-| `tests/test_lvgl_jpeg_decode.py` | CircuitPython-side test: `lv.image` on the jpegio corpus vs. jpegio's golden digests, plus CP's own `jpegio` -> `displayio.Bitmap` as a second witness (run with the built `circuitpython`; the witness skips the right-edge MCU block of odd widths, where CP's `bitmap_output()` mis-strides -- a CircuitPython bug, not the shim's) |
-| `tools/host_jpegio_decoder_check.sh` | Host proof of the decoder shim without a CircuitPython build: links LVGL + CP's `lib/tjpgd` + the shim, renders the corpus, compares digests |
-| `manifest.py` | Freezes `lib/fs_driver.py` (optional freeze helper) |
-| `LVGL_BINDINGS_COMMIT` | The lvgl-bindings commit a build fetches when you give it no checkout |
-| `docs/` | Integration notes |
-
-See `src/circuitpython_spike/` for the spike layout and `docs/build-and-flash.md` for build details.
-
-## JPEG decoding
-
-One TJpgDec per firmware (org `docs/jpegio-vision.md`, Phase 2): the pinned
-lvgl-bindings `lv_conf.h` sets `LV_USE_TJPGD 0` on CircuitPython, so LVGL's
-`libs/tjpgd` compiles to nothing, and `src/lv_jpegio_decoder_circuitpython.c`
-registers CircuitPython's `lib/tjpgd` (compiled whenever `CIRCUITPY_JPEGIO=1`)
-as LVGL's JPEG decoder through the public `lv_image_decoder_create` API. Decoded
-images are `LV_COLOR_FORMAT_RGB565_SWAPPED`, exactly what `jpegio` produces
-(CP's `tjpgd.c` byte-swaps); LVGL's software renderer swaps them back onto an
-RGB565 display. The sniff is SOI-only for both variable and file sources
-(`FF D8`, then `jd_prepare` judges; a file's extension is not consulted -- the
-rule displayif's shim applies on MicroPython, so both runtimes claim the same
-files), so non-JFIF UVC MJPEG frames decode; scale is always 0. A build without `CIRCUITPY_JPEGIO` still links -- it just
-has no JPEG decoder for LVGL. `lv.tjpgd_init` does not exist on CircuitPython.
-
-```bash
-bin/circuitpython tests/test_lvgl_jpeg_decode.py   # needs ../displayif (corpus) or JPEGIO_FRAMES=
+```text
+clicked
+Hello from LVGL - drew 240 px wide
 ```
 
-## Frozen Python
+The picture at the top is the frame that program drew.
 
-`manifest.py` freezes the Python helpers. An aggregator workspace's manifest includes
-it together with the selected port/board upstream manifest. Sync helpers only
-from an exact bindings SHA or release tag with
-`./scripts/sync_from_lvgl_bindings.sh --ref <exact-ref>`.
+[Docs](https://github.com/PyDevices/lvgl-bindings/blob/main/docs/get-started/install.md#circuitpython-compatible-firmware-with-lvgl-circuitpython) · [Examples](https://pydevices.github.io/pydevices-examples/pyscript/) · [Roadmap](ROADMAP.md)
 
-What's planned next is in [ROADMAP.md](ROADMAP.md).
+OmniPython is made by [PyDevices](https://pydevices.com).

@@ -4,7 +4,7 @@
  * LVGL JPEG decoder for CircuitPython, backed by CircuitPython's own TJpgDec
  * (lib/tjpgd -- the copy `jpegio` decodes with).
  *
- * One TJpgDec per firmware (docs/jpegio-vision.md, Phase 2, no LVGL fork):
+ * One TJpgDec per firmware (no LVGL fork):
  * lvgl-bindings' lv_conf.h sets LV_USE_TJPGD 0 on CircuitPython, so LVGL's
  * libs/tjpgd compiles to nothing, and this file registers a decoder through
  * LVGL's public lv_image_decoder_create API instead -- the same registration
@@ -27,7 +27,7 @@
  *  - Sources: LV_IMAGE_SRC_VARIABLE (an lv_image_dsc_t whose `data` holds the
  *    JPEG bytes; its header w/h/cf are not trusted, jd_prepare's are used) and
  *    LV_IMAGE_SRC_FILE (any lv_fs path whose first two bytes are FF D8 -- the
- *    extension is not consulted, the rule displayif's shim applies on
+ *    extension is not consulted, the rule jpegio's MicroPython shim applies on
  *    MicroPython, so an extension-less camera dump decodes on both runtimes).
  *
  * Built only when CIRCUITPY_JPEGIO is 1, which is exactly when CircuitPython
@@ -159,7 +159,7 @@ static bool has_soi(const uint8_t * data, size_t len)
 /* File-source sniff, the same SOI-only rule as variable sources: the first two
  * bytes must be FF D8. The name's extension is not consulted (an extension-less
  * camera dump decodes; a ".jpg" that is not a JPEG is not claimed), which is
- * what displayif's shim does on MicroPython too. Leaves the file at offset 0. */
+ * what jpegio's MicroPython shim does on MicroPython too. Leaves the file at offset 0. */
 static bool file_has_soi(lv_fs_file_t * file)
 {
     uint8_t soi[2];
