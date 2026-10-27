@@ -7,11 +7,11 @@
 # roots, then renders every jpegio corpus frame through lv_image onto a
 # 320x240 native-RGB565 display (variable source with a zeroed header, and file
 # source through a stdio lv_fs driver) and compares the flushed pixels against
-# jpegio's golden digests (displayif tests/jpegio/frames/golden_tjpgd.json,
+# jpegio's golden digests (micropython-pydevices modules/jpegio/tests/frames/golden_tjpgd.json,
 # scale 0). Frames the golden file knows must decode and match; the others
 # (progressive, DHT-less) must be refused; an extension-less copy of the C920e
 # frame must decode as a file source too (the sniff is SOI-only, never the
-# extension -- the rule displayif's shim applies on MicroPython). Also proves:
+# extension -- the rule jpegio's MicroPython shim applies). Also proves:
 # exactly one jd_prepare in the link (CP's), registration is idempotent, and
 # re-arms after lv_deinit.
 #
@@ -19,7 +19,7 @@
 #
 # Environment: LV_BINDINGS_DIR (default ../lvgl-bindings), CP_DIR (default
 # ../circuitpython, else ../cmods/circuitpython), JPEGIO_FRAMES (default
-# ../displayif/tests/jpegio/frames). The CP tree is only read (headers and one
+# ../micropython-pydevices/modules/jpegio/tests/frames). The CP tree is only read (headers and one
 # .c compiled into tools/host_jpegio_decoder_check/build/). Needs gcc, python3.
 set -euo pipefail
 
@@ -33,7 +33,7 @@ if [[ -z "$CP" ]]; then
         [[ -f "$c/lib/tjpgd/src/tjpgd.c" ]] && CP=$c && break
     done
 fi
-FRAMES=${JPEGIO_FRAMES:-$WS/displayif/tests/jpegio/frames}
+FRAMES=${JPEGIO_FRAMES:-$WS/micropython-pydevices/modules/jpegio/tests/frames}
 SRC=$HERE/host_jpegio_decoder_check
 BUILD=$SRC/build
 SHIM=${SHIM:-$ROOT/src/lv_jpegio_decoder_circuitpython.c}

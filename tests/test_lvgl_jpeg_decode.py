@@ -1,6 +1,6 @@
 """lv.image decodes jpegio's corpus on CircuitPython through the jpegio decoder shim.
 
-The CircuitPython half of jpegio Phase 2 (org docs/jpegio-vision.md): LVGL's
+The CircuitPython half of jpegio's LVGL decoder: LVGL's
 own TJPGD is off (lvgl-bindings lv_conf.h, LV_USE_TJPGD 0 on CircuitPython),
 and src/lv_jpegio_decoder_circuitpython.c registers CircuitPython's lib/tjpgd
 -- the TJpgDec `jpegio` decodes with -- as LVGL's JPEG decoder, labelled
@@ -11,7 +11,7 @@ Checks, all plain asserts:
   1. lv.tjpgd_init / lv.tjpgd_deinit are absent (LVGL's decoder is off here).
   2. lv.image on each corpus frame renders onto a native RGB565 display and the
      flushed pixels, cropped to the image, hash to jpegio's own golden digest
-     for that frame at scale 0 (displayif tests/jpegio/frames/golden_tjpgd.json,
+     for that frame at scale 0 (micropython-pydevices modules/jpegio/tests/frames/golden_tjpgd.json,
      native-order RGB565, tight). No swap is applied to the expected bytes: the
      decoder hands LVGL RGB565_SWAPPED pixels and LVGL's software blend swaps
      them back onto the RGB565 display (lv_draw_sw_blend_to_rgb565.c,
@@ -41,17 +41,17 @@ Checks, all plain asserts:
   7. File sources through lib/fs_driver.py (this repo's synced copy, put on
      sys.path): the C920e frame by its .jpg path, the same bytes copied to a
      temporary file WITHOUT an extension (the sniff is SOI-only for files too,
-     the rule displayif's shim applies on MicroPython), both hashing to the
+     the rule jpegio's MicroPython shim applies), both hashing to the
      golden digest; a non-JPEG file (the corpus README) stays 0x0.
 
 Run with the unix CircuitPython built with CIRCUITPY_LVGL=1 and
 CIRCUITPY_JPEGIO=1 (the coverage variant has both) against lvgl-bindings at the
 commit in LVGL_BINDINGS_COMMIT, from this repo's root or the aggregator:
 
-    bin/circuitpython tests/test_lvgl_jpeg_decode.py
+    circuitpython tests/test_lvgl_jpeg_decode.py
 
-Needs the displayif checkout as a sibling of this repo (frames at
-../displayif/tests/jpegio/frames, resolved from this file's location) or
+Needs the micropython-pydevices checkout as a sibling of this repo (frames at
+../micropython-pydevices/modules/jpegio/tests/frames, resolved from this file's location) or
 JPEGIO_FRAMES=/path/to/frames in the environment. Uses hashlib, binascii,
 json, os, jpegio and displayio from the CircuitPython build. Pure-CPython
 pytest collection skips this file: everything runs from main().
@@ -65,7 +65,7 @@ def _frames_dir():
     if env:
         return env
     here = __file__.rsplit("/", 1)[0] if "/" in __file__ else "."
-    return here + "/../../displayif/tests/jpegio/frames"
+    return here + "/../../micropython-pydevices/modules/jpegio/tests/frames"
 
 
 def _now():
