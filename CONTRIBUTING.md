@@ -36,7 +36,7 @@ lvgl-bindings smoke suite for the target.
 Lay out the repositories side by side:
 
 ```text
-workspace/
+checkouts/
   lvgl-circuitpython/
   lvgl-bindings/
   circuitpython/
