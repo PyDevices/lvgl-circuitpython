@@ -18,7 +18,7 @@
 #   ./tools/host_jpegio_decoder_check.sh
 #
 # Environment: LV_BINDINGS_DIR (default ../lvgl-bindings), CP_DIR (default
-# ../circuitpython, else ../cmods/circuitpython), JPEGIO_FRAMES (default
+# ../circuitpython, else ../micropython-pydevices/deps/circuitpython), JPEGIO_FRAMES (default
 # ../micropython-pydevices/modules/jpegio/tests/frames). The CP tree is only read (headers and one
 # .c compiled into tools/host_jpegio_decoder_check/build/). Needs gcc, python3.
 set -euo pipefail
@@ -29,7 +29,7 @@ WS=$(cd "$ROOT/.." && pwd)
 B=${LV_BINDINGS_DIR:-$WS/lvgl-bindings}
 CP=${CP_DIR:-}
 if [[ -z "$CP" ]]; then
-    for c in "$WS/circuitpython" "$WS/cmods/circuitpython"; do
+    for c in "$WS/circuitpython" "$WS/micropython-pydevices/deps/circuitpython"; do
         [[ -f "$c/lib/tjpgd/src/tjpgd.c" ]] && CP=$c && break
     done
 fi
