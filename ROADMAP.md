@@ -1,12 +1,13 @@
 # Roadmap
 
-- CI that builds a CircuitPython port with lvgl and runs the tests on it.
-- An `examples/` folder, starting with `lvgl_simpletest.py`.
-- `lvgl_circuitpython.__revision__`, naming the commit your firmware built,
-  as lvgl-micropython's `lvgl_micropython.__revision__` does.
-- `LVGL_BINDINGS_COMMIT` becomes `DEPENDENCIES.lock`, the pin file every
-  PyDevices repository uses: a dependency, its URL and its full commit a line.
+One larger change is planned:
 
-Otherwise work here follows bug reports and requests, so if something is
+- One repository: lvgl-circuitpython moves, together with lvgl-bindings and the other
+  two LVGL builds, into a single new repository, `PyDevices/omnipython-lvgl`.
+  The MicroPython, CircuitPython and CPython builds then always share one
+  bindings commit. This repository is archived after the move, and its README
+  will point to the new one.
+
+Otherwise, work here follows bug reports and requests, so if something is
 broken or missing for you, open an
 [issue](https://github.com/PyDevices/lvgl-circuitpython/issues).
